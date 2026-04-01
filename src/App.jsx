@@ -6,7 +6,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 const DEFAULT_CONFIG = {
   gameName: "PIXEL GO",
   tagline: "COLOUR TERRITORY BATTLE",
-  maxRounds: 30,
+  maxRounds: 0,  // 0 = no turn limit — ends when victory is mathematically assured
   boardColours: [
     { hex:"#E8192C", name:"Red"     },
     { hex:"#FF7500", name:"Orange"  },
@@ -38,9 +38,12 @@ const DEFAULT_CONFIG = {
     normal: { label:"Normal", color:"#FFD32A", board:"grouped", cascade:"none",
               line1:"Groups of 2–6 pixels, no singletons",
               line2:"Only the clicked group joins — no chaining" },
-    hard:   { label:"Hard",   color:"#FF4757", board:"random",  cascade:"full",
+    hard:   { label:"Hard",      color:"#FF4757", board:"random",  cascade:"full",
               line1:"Fully random pixels, any group size",
               line2:"All matching colour groups nearby chain together" },
+    veryhard:{ label:"Very Hard", color:"#CC00CC", board:"random",  cascade:"none",
+              line1:"Fully random pixels, any group size",
+              line2:"Only the exact group you click joins — no chaining at all" },
   },
   gridSizes: {
     small:  { bs:12, label:"Small",  sub:"12 × 12" },
@@ -676,6 +679,32 @@ function EditorScreen({config,onSave,onClose}){
 /* ════════════════════════════════════════════════════════
    MAIN COMPONENT
 ════════════════════════════════════════════════════════ */
+// Returns player index if they mathematically cannot be beaten, else -1
+// A player has assured victory when their score > opponent's score + remaining cells
+function checkMathematicalVictory(ownership, numPlayers, teamMode, BS){
+  const TOTAL=BS*BS;
+  const scores=Array(numPlayers).fill(0);
+  let remaining=0;
+  for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
+    const v=ownership[r][c];
+    if(v>=0) scores[v]++; else remaining++;
+  }
+  if(teamMode){
+    // Team 0: players 0,2 — Team 1: players 1,3
+    const t0=scores[0]+(scores[2]||0);
+    const t1=scores[1]+(scores[3]||0);
+    if(t0 > t1+remaining) return 0; // team 0 wins
+    if(t1 > t0+remaining) return 1; // team 1 wins
+    return -1;
+  }
+  for(let i=0;i<numPlayers;i++){
+    let maxOther=0;
+    for(let j=0;j<numPlayers;j++) if(j!==i) maxOther=Math.max(maxOther,scores[j]);
+    if(scores[i] > maxOther+remaining) return i;
+  }
+  return -1;
+}
+
 export default function PixelGo(){
   const[config,setConfig]              =useState(loadConfig);
   const[phase,setPhase]                =useState("numSelect");
@@ -706,6 +735,7 @@ export default function PixelGo(){
   const[confirmEnd,setConfirmEnd]      =useState(false);
   const[finalOwnership,setFinalOwnership]=useState(null);
   const[reviewing,setReviewing]        =useState(false);
+  const[teamMode,setTeamMode]          =useState(false);  // 2v2 for 4-player games
   const[aiThinking,setAiThinking]      =useState(false);
   const[showInstructions,setShowInstructions]=useState(false);
 
@@ -727,7 +757,8 @@ export default function PixelGo(){
   const PALETTE   =config.boardColours;
   const diff      =difficulty?config.difficulties[difficulty]:null;
   const BS        =gridSize?config.gridSizes[gridSize].bs:22;
-  const MAX_ROUNDS=config.maxRounds;
+  const MAX_ROUNDS=config.maxRounds;  // 0 = unlimited
+  const UNLIMITED = MAX_ROUNDS === 0;
 
   // Keep refs in sync so AI setTimeout callbacks always read current state
   useEffect(()=>{ ownershipRef.current    =ownership;     },[ownership]);
@@ -751,6 +782,8 @@ export default function PixelGo(){
     for(let r=0;r<BS;r++) for(let col=0;col<BS;col++){const v=ownership[r][col];if(v>=0) c[v]++;}
     return c;
   },[ownership,BS]);
+  // Team scores: team 0 = players 0+2, team 1 = players 1+3
+  const teamScores=useMemo(()=>teamMode?[scores[0]+(scores[2]||0),scores[1]+(scores[3]||0)]:[0,0],[scores,teamMode]);
 
   const TOTAL=BS*BS;
   const claimed=scores.slice(0,numPlayers).reduce((a,b)=>a+b,0);
@@ -775,10 +808,14 @@ export default function PixelGo(){
   },[hovered,board,ownership,prevOwnership,captureCount,clickableCells,cp,phase,diff,BS,playerDefs]);
 
   const topPlayer=useMemo(()=>{
+    if(teamMode){
+      // Return index 0 or 1 for winning team
+      return teamScores[0]>=teamScores[1]?0:1;
+    }
     let max=-1,top=0;
     for(let i=0;i<numPlayers;i++) if(scores[i]>max){max=scores[i];top=i;}
     return top;
-  },[scores,numPlayers]);
+  },[scores,numPlayers,teamMode,teamScores]);
 
   const hoverColourName=useMemo(()=>{
     if(!hovered||!board||!ownership) return null;
@@ -833,6 +870,10 @@ export default function PixelGo(){
         }
       }
       if(afterEnc.flat().every(v=>v>=0)){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
+      if(UNLIMITED){
+        const mathWinner=checkMathematicalVictory(afterEnc,curNumPlayers,teamMode,BS);
+        if(mathWinner>=0){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
+      }
     }
 
     // Step 2: end turn (delayed so capture animation plays first)
@@ -843,7 +884,7 @@ export default function PixelGo(){
       let newRound=curRound;
       if(next===0){
         newRound++;
-        if(newRound>MAX_ROUNDS){setFinalOwnership(afterOwnership);music.sfxVictory();setPhase("gameover");return;}
+        if(!UNLIMITED&&newRound>MAX_ROUNDS){setFinalOwnership(afterOwnership);music.sfxVictory();setPhase("gameover");return;}
         setRound(newRound);
       }
       const{newOwnership:o2,autoClaimed}=autoClaimAdjacent(curBoard,afterOwnership,next,curDefs,PALETTE,BS);
@@ -883,7 +924,12 @@ export default function PixelGo(){
       afterEnc.forEach(row=>row.forEach(v=>{if(v>=0) ts[v]++;}));
       for(let i=0;i<numPlayers;i++) if(ts[i]>TOTAL/2){setVictoryAssured({playerIdx:i,name:playerDefs[i].name,hex:playerDefs[i].hex});break;}
     }
-    if(afterEnc.flat().every(v=>v>=0)){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");}
+    if(afterEnc.flat().every(v=>v>=0)){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
+    // In unlimited mode, end when someone mathematically cannot lose
+    if(UNLIMITED){
+      const mathWinner=checkMathematicalVictory(afterEnc,numPlayers,teamMode,BS);
+      if(mathWinner>=0){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
+    }
   }
 
   function doEndTurn(){
@@ -892,7 +938,7 @@ export default function PixelGo(){
     setConfirmEnd(false);
     const next=(cp+1)%numPlayers;
     let newRound=round;
-    if(next===0){newRound++;if(newRound>MAX_ROUNDS){setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");return;}setRound(newRound);}
+    if(next===0){newRound++;if(!UNLIMITED&&newRound>MAX_ROUNDS){setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");return;}setRound(newRound);}
     const{newOwnership:o2,autoClaimed}=autoClaimAdjacent(board,ownership,next,playerDefs,PALETTE,BS);
     if(autoClaimed.size>0){setOwnership(o2);setAutoFlash(autoClaimed);music.sfxAutoGrab();setTimeout(()=>setAutoFlash(null),800);
       if(o2.flat().every(v=>v>=0)){setFinalOwnership(o2);music.sfxVictory();setPhase("gameover");return;}}
@@ -921,17 +967,74 @@ export default function PixelGo(){
 
     // If vs computer, auto-assign AI player after human picks
     if(vsComputer&&newDefs.length===1){
+      // ── 1. Pick a RANDOM colour the human hasn't chosen ──
       const usedHexes=newDefs.map(d=>d.hex);
-      const aiTeam=config.teams.find(t=>!usedHexes.includes(t.hex))||config.teams[1];
-      // Pick the corner furthest from the human's chosen cell
-      const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];
-      let bestPos=corners[0],bestDist=-1;
-      for(const[cr,cc]of corners){
-        // Skip if human is already there
-        if(cr===r&&cc===c) continue;
-        const d=Math.abs(cr-r)+Math.abs(cc-c);
-        if(d>bestDist){bestDist=d;bestPos=[cr,cc];}
+      const available=config.teams.filter(t=>!usedHexes.includes(t.hex));
+      const aiTeam=available[Math.floor(Math.random()*available.length)]||config.teams[1];
+
+      // ── 2. Pick start position based on AI level ──
+      let bestPos=[0,BS-1]; // fallback
+
+      if(aiLevel==="recruit"){
+        // Recruit: just pick the corner furthest from human
+        const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];
+        let bestDist=-1;
+        for(const[cr,cc]of corners){
+          if(cr===r&&cc===c) continue;
+          const d=Math.abs(cr-r)+Math.abs(cc-c);
+          if(d>bestDist){bestDist=d;bestPos=[cr,cc];}
+        }
+      } else {
+        // Veteran / Master: find the cell in the largest connected group
+        // of the AI's assigned board colour, then start there
+        const aiColorIdx=PALETTE.findIndex(bc=>bc.hex===aiTeam.hex);
+
+        // Flood-fill all groups of that colour and find the biggest
+        const visited=Array.from({length:BS},()=>Array(BS).fill(false));
+        let biggestGroup=[], biggestSize=0;
+
+        // Scratch ownership (all unclaimed) for the flood fill
+        const scratch=Array.from({length:BS},()=>Array(BS).fill(-1));
+
+        for(let gr=0;gr<BS;gr++) for(let gc=0;gc<BS;gc++){
+          if(visited[gr][gc]||sharedBoard[gr][gc]!==aiColorIdx) continue;
+          // BFS this group
+          const group=[];
+          const q=[[gr,gc]];
+          visited[gr][gc]=true;
+          while(q.length){
+            const[qr,qc]=q.shift();
+            group.push([qr,qc]);
+            for(const[nr,nc]of[[qr-1,qc],[qr+1,qc],[qr,qc-1],[qr,qc+1]]){
+              if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!visited[nr][nc]&&sharedBoard[nr][nc]===aiColorIdx){
+                visited[nr][nc]=true;
+                q.push([nr,nc]);
+              }
+            }
+          }
+          if(group.length>biggestSize){biggestSize=group.length;biggestGroup=group;}
+        }
+
+        if(biggestGroup.length>0){
+          // Pick the cell in the biggest group that is furthest from the human's start
+          let bestDist=-1;
+          for(const[gr,gc]of biggestGroup){
+            if(gr===r&&gc===c) continue; // don't land on human
+            const d=Math.abs(gr-r)+Math.abs(gc-c);
+            if(d>bestDist){bestDist=d;bestPos=[gr,gc];}
+          }
+        } else {
+          // Fallback: furthest corner
+          const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];
+          let bestDist=-1;
+          for(const[cr,cc]of corners){
+            if(cr===r&&cc===c) continue;
+            const d=Math.abs(cr-r)+Math.abs(cc-c);
+            if(d>bestDist){bestDist=d;bestPos=[cr,cc];}
+          }
+        }
       }
+
       newDefs=[...newDefs,{...aiTeam,row:bestPos[0],col:bestPos[1],isAI:true,aiLevel}];
     }
 
@@ -977,7 +1080,7 @@ export default function PixelGo(){
     setLegendFocus(null);setFlash(null);setEnclosedFlash(null);setAutoFlash(null);
     setConfirmEnd(false);setFinalOwnership(null);setReviewing(false);
     setTurnNum(1);setVictoryAssured(null);setShowScores(false);
-    setVsComputer(false);setAiLevel(null);setAiThinking(false);setShowInstructions(false);
+    setVsComputer(false);setAiLevel(null);setAiThinking(false);setShowInstructions(false);setTeamMode(false);
   };
 
   if(editing) return<EditorScreen config={config} onSave={cfg=>{setConfig(cfg);}} onClose={()=>setEditing(false)}/>;
@@ -988,9 +1091,19 @@ export default function PixelGo(){
       <Logo name={config.gameName}/>
       <Dim>{config.tagline}</Dim>
       <SLabel>HOW MANY PLAYERS?</SLabel>
-      <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",justifyContent:"center"}}>
-        {[1,2,4].map(n=><NumBtn key={n} onClick={()=>goToDifficulty(n)}>{n}</NumBtn>)}
+      <div style={{display:"flex",gap:10,marginBottom:8,flexWrap:"wrap",justifyContent:"center"}}>
+        {[1,2,4].map(n=><NumBtn key={n} onClick={()=>{setTeamMode(false);goToDifficulty(n);}}>{n}</NumBtn>)}
       </div>
+      <button onClick={()=>{setTeamMode(true);goToDifficulty(4);}} style={{
+        width:"100%",padding:"10px 16px",borderRadius:10,cursor:"pointer",marginBottom:10,
+        border:"2px solid #FFD32A",background:"rgba(255,211,42,0.08)",
+        color:"#FFD32A",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:"bold",letterSpacing:2,
+        transition:"all 0.2s",
+      }}
+        onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,211,42,0.18)";e.currentTarget.style.boxShadow="0 0 20px rgba(255,211,42,0.35)";}}
+        onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,211,42,0.08)";e.currentTarget.style.boxShadow="none";}}>
+        ⚔️ 2 VS 2 (TEAM MODE)
+      </button>
       {/* VS Computer button */}
       <button onClick={()=>goToDifficulty(2,true)} style={{
         width:"100%",padding:"12px 16px",borderRadius:10,cursor:"pointer",marginBottom:24,
@@ -1173,7 +1286,9 @@ export default function PixelGo(){
     const usedO=finalOwnership||ownership;
     const fs=Array(4).fill(0);
     if(usedO) for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){const v=usedO[r][c];if(v>=0) fs[v]++;}
-    const winner=playerDefs[topPlayer],winHex=winner.hex;
+    const winner=teamMode?null:playerDefs[topPlayer];
+    const winHex=teamMode?(topPlayer===0?"#FFD32A":"#A29BFE"):winner.hex;
+    const winTeamName=topPlayer===0?"TEAM GOLD":"TEAM VIOLET";
     const solo1p=numPlayers===1,pct=Math.round(fs[0]/TOTAL*100);
     const vt=config.victoryText;
     const grade=solo1p
@@ -1230,24 +1345,38 @@ export default function PixelGo(){
           color:solo1p&&!grade.victory?"#FF4757":winHex,
           textShadow:`0 0 32px ${solo1p&&!grade.victory?"rgba(255,71,87,0.7)":hexToRgba(winHex,0.8)}`,
           textAlign:"center",animation:!solo1p||grade.victory?"glow-pulse 2s ease-in-out infinite":"none"}}>
-          {solo1p?grade.title:winner.isAI?"COMPUTER WINS":"VICTORY"}
+          {solo1p?grade.title:teamMode?"TEAM VICTORY":winner.isAI?"COMPUTER WINS":"VICTORY"}
         </div>
-        {!solo1p&&<div style={{fontSize:24,fontWeight:"bold",color:winHex,textAlign:"center",
+        {!solo1p&&teamMode&&(
+          <div style={{fontSize:24,fontWeight:"bold",color:winHex,textAlign:"center",
+            textShadow:`0 0 20px ${hexToRgba(winHex,0.6)}`}}>
+            {winTeamName}
+            <div style={{fontSize:11,color:hexToRgba(winHex,0.7),marginTop:4}}>
+              {playerDefs.filter((_,i)=>i%2===topPlayer%2).map(d=>d.name).join(" + ")}
+            </div>
+          </div>
+        )}
+        {!solo1p&&!teamMode&&<div style={{fontSize:24,fontWeight:"bold",color:winHex,textAlign:"center",
           textShadow:`0 0 20px ${hexToRgba(winHex,0.6)}`}}>{winner.name}{winner.isAI?" 🤖":""}</div>}
         <div style={{color:solo1p&&!grade.victory?"#FF474788":hexToRgba(winHex,0.6),
           fontSize:10,letterSpacing:1,textAlign:"center"}}>
-          {solo1p?grade.sub:`P${topPlayer+1} ${config.multiWinText} · ${turnNum-1} turns played`}
+          {solo1p?grade.sub:teamMode?`${teamScores[topPlayer]} vs ${teamScores[1-topPlayer]} cells · ${turnNum-1} turns`:`P${topPlayer+1} ${config.multiWinText} · ${turnNum-1} turns played`}
         </div>
         <div style={{width:"100%",maxWidth:280}}>
           {Array.from({length:numPlayers},(_,i)=>{
             const def=playerDefs[i],isWinner=i===topPlayer&&numPlayers>1;
             const rank=numPlayers>1?[...Array(numPlayers).keys()].sort((a,b)=>fs[b]-fs[a]).indexOf(i)+1:null;
+            const teamColor=teamMode?(i%2===0?"#FFD32A":"#A29BFE"):null;
+            const isWinningTeam=teamMode&&(i%2===topPlayer%2);
             return(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
                 padding:"8px 12px",borderRadius:8,
-                background:isWinner?hexToRgba(def.hex,0.15):"transparent",
-                border:isWinner?`1px solid ${hexToRgba(def.hex,0.4)}`:"1px solid transparent"}}>
-                {numPlayers>1&&<div style={{width:18,height:18,borderRadius:"50%",background:isWinner?def.hex:"#1a1a2e",
+                background:(isWinner||isWinningTeam)?hexToRgba(teamColor||def.hex,0.15):"transparent",
+                border:(isWinner||isWinningTeam)?`1px solid ${hexToRgba(teamColor||def.hex,0.4)}`:"1px solid transparent"}}>
+                {teamMode&&<div style={{width:18,height:18,borderRadius:"50%",
+                  background:teamColor,display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:8,fontWeight:"bold",color:"black",flexShrink:0}}>{i%2===0?"▲":"▼"}</div>}
+                {numPlayers>1&&!teamMode&&<div style={{width:18,height:18,borderRadius:"50%",background:isWinner?def.hex:"#1a1a2e",
                   display:"flex",alignItems:"center",justifyContent:"center",
                   fontSize:8,fontWeight:"bold",color:isWinner?"white":"#555",flexShrink:0}}>{rank}</div>}
                 <div style={{width:9,height:9,borderRadius:"50%",background:def.hex,boxShadow:`0 0 6px ${def.hex}`,flexShrink:0}}/>
@@ -1334,7 +1463,7 @@ export default function PixelGo(){
       <div style={{display:"flex",alignItems:"center",gap:6,width:"100%",maxWidth:380,flexShrink:0}}>
         <Badge color={diffColor}>{difficulty.toUpperCase()}</Badge>
         <Badge color={diffColor}>{config.gridSizes[gridSize].label.toUpperCase()}</Badge>
-        <span style={{color:"#888",fontSize:9,letterSpacing:1,whiteSpace:"nowrap"}}>RND {round}/{MAX_ROUNDS}</span>
+        <span style={{color:"#888",fontSize:9,letterSpacing:1,whiteSpace:"nowrap"}}>{UNLIMITED?`TURN ${turnNum}`:`RND ${round}/${MAX_ROUNDS}`}</span>
         <div style={{flex:1,height:2,background:"#1a1a2e",borderRadius:1}}>
           <div style={{height:"100%",borderRadius:1,
             background:`linear-gradient(90deg,${playerDefs[0].hex},${playerDefs[numPlayers-1].hex})`,
@@ -1455,6 +1584,7 @@ export default function PixelGo(){
               }
               <div style={{fontSize:6,color:isCur?hexToRgba(def.hex,0.85):"#666",letterSpacing:0.5,margin:"3px 0 4px",lineHeight:1.2}}>
                 {def.name.toUpperCase()}
+                {teamMode&&<span style={{color:i%2===0?"#FFD32A":"#A29BFE",fontSize:6,marginLeft:3}}>{i%2===0?"▲":"▼"}</span>}
               </div>
               {showScore&&(
                 <div style={{height:2,background:"#1a1a2e",borderRadius:1,margin:"0 4px"}}>
@@ -1618,6 +1748,15 @@ const INSTRUCTIONS = {
       { heading: "BOARD", body: "Fully random pixel placement. Cells can be any size group including single isolated pixels. Much harder to predict what you'll capture." },
       { heading: "CASCADE", body: "Same as Easy — capturing a colour sweeps in all same-colour patches touching your territory." },
       { heading: "HIDDEN SCORES", body: "Scores hidden. Use 👁 to peek." },
+    ]
+  },
+  teammode: {
+    title: "TEAM MODE (2v2)",
+    icon: "⚔️",
+    sections: [
+      { heading: "TEAMS", body: "Players 1 & 3 form one team (▲ Gold), Players 2 & 4 form the other (▼ Violet). You each still play individually on your own turn." },
+      { heading: "WINNING", body: "Your team wins when the two of you combined hold more territory than the opposing pair. Coordinate your expansion to fill areas your teammate can't reach." },
+      { heading: "STRATEGY", body: "Try to expand towards your teammate to create a connected wall that traps the opponents. Your teammate's territory counts as friendly for enclosure purposes." },
     ]
   },
   vscomputer: {
