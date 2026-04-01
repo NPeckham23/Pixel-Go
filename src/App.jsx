@@ -1,348 +1,175 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 
 /* ════════════════════════════════════════════════════════
+   THEMES
+════════════════════════════════════════════════════════ */
+const THEMES = {
+  neon: {
+    name:"Neon Arcade",
+    bg:"#080812", cardBg:"#0d0d1a", border:"#2a2a4a",
+    text:"#eee", textDim:"#888", textFaint:"#444",
+    gapColor:"#111", cellRadius:0, font:"'Space Mono',monospace",
+    accentColor:"#A29BFE", pixelated:false,
+    btnBorder:"#333", btnText:"#aaa",
+  },
+  pastel: {
+    name:"Pastel Soft",
+    bg:"#F5F0FF", cardBg:"#FFFFFF", border:"#DDD0F0",
+    text:"#3D2B5E", textDim:"#9080B0", textFaint:"#C8B8E0",
+    gapColor:"#E8D8F8", cellRadius:3, font:"'Space Mono',monospace",
+    accentColor:"#9B70D0", pixelated:false,
+    btnBorder:"#C8B0E8", btnText:"#6B5090",
+  },
+  retro: {
+    name:"Retro 8-Bit",
+    bg:"#0A0A0A", cardBg:"#111111", border:"#00AA22",
+    text:"#00FF41", textDim:"#00882A", textFaint:"#004412",
+    gapColor:"#000000", cellRadius:0, font:"'Space Mono',monospace",
+    accentColor:"#00FF41", pixelated:true,
+    btnBorder:"#00AA22", btnText:"#00CC33",
+  },
+};
+
+/* ════════════════════════════════════════════════════════
    DEFAULT CONFIG
 ════════════════════════════════════════════════════════ */
 const DEFAULT_CONFIG = {
-  gameName: "PIXEL GO",
-  tagline: "COLOUR TERRITORY BATTLE",
-  maxRounds: 0,  // 0 = no turn limit — ends when victory is mathematically assured
-  boardColours: [
-    { hex:"#E8192C", name:"Red"     },
-    { hex:"#FF7500", name:"Orange"  },
-    { hex:"#F5D000", name:"Yellow"  },
-    { hex:"#41C900", name:"Lime"    },
-    { hex:"#00A86B", name:"Jade"    },
-    { hex:"#00C8C8", name:"Teal"    },
-    { hex:"#0078FF", name:"Blue"    },
-    { hex:"#7B2FFF", name:"Violet"  },
-    { hex:"#CC00CC", name:"Magenta" },
-    { hex:"#FF2B8A", name:"Pink"    },
-    { hex:"#A0522D", name:"Sienna"  },
-    { hex:"#9E9E9E", name:"Grey"    },
+  gameName:"PIXEL GO", tagline:"COLOUR TERRITORY BATTLE",
+  maxRounds:0, theme:"neon",
+  boardColours:[
+    {hex:"#E8192C",name:"Red"},{hex:"#FF7500",name:"Orange"},
+    {hex:"#F5D000",name:"Yellow"},{hex:"#41C900",name:"Lime"},
+    {hex:"#00A86B",name:"Jade"},{hex:"#00C8C8",name:"Teal"},
+    {hex:"#0078FF",name:"Blue"},{hex:"#7B2FFF",name:"Violet"},
+    {hex:"#CC00CC",name:"Magenta"},{hex:"#FF2B8A",name:"Pink"},
+    {hex:"#A0522D",name:"Sienna"},{hex:"#9E9E9E",name:"Grey"},
   ],
-  teams: [
-    { hex:"#E8192C", name:"Scarlet Fury"   },
-    { hex:"#FF7500", name:"Orange Tigers"  },
-    { hex:"#F5D000", name:"Yellow Thunder" },
-    { hex:"#41C900", name:"Neon Vipers"    },
-    { hex:"#00A86B", name:"Jade Dragons"   },
-    { hex:"#00C8C8", name:"Cyan Storm"     },
-    { hex:"#0078FF", name:"Azure Knights"  },
-    { hex:"#7B2FFF", name:"Amethyst Power" },
+  teams:[
+    {hex:"#E8192C",name:"Scarlet Fury"},{hex:"#FF7500",name:"Orange Tigers"},
+    {hex:"#F5D000",name:"Yellow Thunder"},{hex:"#41C900",name:"Neon Vipers"},
+    {hex:"#00A86B",name:"Jade Dragons"},{hex:"#00C8C8",name:"Cyan Storm"},
+    {hex:"#0078FF",name:"Azure Knights"},{hex:"#7B2FFF",name:"Amethyst Power"},
   ],
-  difficulties: {
-    easy:   { label:"Easy",   color:"#2ED573", board:"grouped", cascade:"full",
-              line1:"Groups of 2–6 pixels, no singletons",
-              line2:"All matching colour groups nearby chain together" },
-    normal: { label:"Normal", color:"#FFD32A", board:"grouped", cascade:"none",
-              line1:"Groups of 2–6 pixels, no singletons",
-              line2:"Only the clicked group joins — no chaining" },
-    hard:   { label:"Hard",      color:"#FF4757", board:"random",  cascade:"full",
-              line1:"Fully random pixels, any group size",
-              line2:"All matching colour groups nearby chain together" },
-    veryhard:{ label:"Very Hard", color:"#CC00CC", board:"random",  cascade:"none",
-              line1:"Fully random pixels, any group size",
-              line2:"Only the exact group you click joins — no chaining at all" },
+  difficulties:{
+    easy:  {label:"Easy",  color:"#2ED573",board:"grouped",cascade:"full",
+            line1:"Groups of 2–6 pixels, no singletons",line2:"All matching colour groups nearby chain together"},
+    normal:{label:"Normal",color:"#FFD32A",board:"grouped",cascade:"none",
+            line1:"Groups of 2–6 pixels, no singletons",line2:"Only the clicked group joins — no chaining"},
+    hard:  {label:"Hard",  color:"#FF4757",board:"random", cascade:"full",
+            line1:"Fully random pixels, any group size",line2:"All matching colour groups chain together + Fog of War"},
+    veryhard:{label:"Very Hard",color:"#CC00CC",board:"random",cascade:"none",
+            line1:"Fully random pixels, any group size",line2:"Only the exact group you click + Fog of War"},
   },
-  gridSizes: {
-    small:  { bs:12, label:"Small",  sub:"12 × 12" },
-    medium: { bs:17, label:"Medium", sub:"17 × 17" },
-    large:  { bs:22, label:"Large",  sub:"22 × 22" },
+  gridSizes:{
+    small: {bs:12,label:"Small", sub:"12 × 12"},
+    medium:{bs:17,label:"Medium",sub:"17 × 17"},
+    large: {bs:22,label:"Large", sub:"22 × 22"},
   },
-  victoryText: {
-    conquest:    { title:"CONQUEST COMPLETE",    sub:"Every cell is yours.",   icon:"🏆" },
-    overwhelming:{ title:"OVERWHELMING VICTORY", sub:"{pct}% captured.",       icon:"🌟" },
-    victory:     { title:"VICTORY",              sub:"{pct}% captured.",       icon:"⚡" },
-    close:       { title:"CLOSE BATTLE",         sub:"{pct}% captured.",       icon:"😤" },
-    defeat:      { title:"DEFEAT",               sub:"Only {pct}% captured.", icon:"💀" },
+  victoryText:{
+    conquest:    {title:"CONQUEST COMPLETE",   sub:"Every cell is yours.",  icon:"🏆"},
+    overwhelming:{title:"OVERWHELMING VICTORY",sub:"{pct}% captured.",      icon:"🌟"},
+    victory:     {title:"VICTORY",             sub:"{pct}% captured.",      icon:"⚡"},
+    close:       {title:"CLOSE BATTLE",        sub:"{pct}% captured.",      icon:"😤"},
+    defeat:      {title:"DEFEAT",              sub:"Only {pct}% captured.", icon:"💀"},
   },
-  multiWinText: "dominates the board",
-  victoryAssuredText: "Victory is now assured — play on or call the game?",
+  multiWinText:"dominates the board",
+  victoryAssuredText:"Victory is now assured — play on or call the game?",
 };
 
-/* ── Config persistence ── */
-function loadConfig() {
-  try {
-    const s = localStorage.getItem("pixelgo_config");
-    return s ? deepMerge(DEFAULT_CONFIG, JSON.parse(s)) : DEFAULT_CONFIG;
-  } catch { return DEFAULT_CONFIG; }
+function loadConfig(){
+  try{const s=localStorage.getItem("pixelgo_config");return s?deepMerge(DEFAULT_CONFIG,JSON.parse(s)):DEFAULT_CONFIG;}
+  catch{return DEFAULT_CONFIG;}
 }
-function saveConfig(cfg) {
-  try { localStorage.setItem("pixelgo_config", JSON.stringify(cfg)); } catch {}
-}
-function deepMerge(def, over) {
-  if (!over) return def;
-  const r = { ...def };
-  for (const k of Object.keys(over)) {
-    if (over[k]!==null && typeof over[k]==="object" && !Array.isArray(over[k]))
-      r[k] = deepMerge(def[k]||{}, over[k]);
-    else r[k] = over[k];
+function saveConfig(cfg){try{localStorage.setItem("pixelgo_config",JSON.stringify(cfg));}catch{}}
+function deepMerge(def,over){
+  if(!over) return def;
+  const r={...def};
+  for(const k of Object.keys(over)){
+    if(over[k]!==null&&typeof over[k]==="object"&&!Array.isArray(over[k]))
+      r[k]=deepMerge(def[k]||{},over[k]);
+    else r[k]=over[k];
   }
   return r;
 }
 
-/* ── AI level definitions ── */
-const AI_LEVELS = {
-  recruit: { key:"recruit", label:"Recruit",  color:"#2ED573", desc:"Makes random moves" },
-  veteran: { key:"veteran", label:"Veteran",  color:"#FFD32A", desc:"Picks the biggest group available" },
-  master:  { key:"master",  label:"Master",   color:"#FF4757", desc:"Maximises gain and blocks your best move" },
+/* ════════════════════════════════════════════════════════
+   STATS
+════════════════════════════════════════════════════════ */
+const STATS_KEY="pixelgo_stats";
+const DEFAULT_STATS={
+  gamesPlayed:0,wins:0,losses:0,
+  totalCaptures:0,biggestSingleCapture:0,
+  totalCells:0,encloseCount:0,
+  vsComputer:{recruit:{wins:0,losses:0},veteran:{wins:0,losses:0},master:{wins:0,losses:0}},
+  daily:{streak:0,lastDate:null,bestScore:0,completions:0},
 };
+function loadStats(){
+  try{const s=localStorage.getItem(STATS_KEY);return s?{...DEFAULT_STATS,...JSON.parse(s)}:DEFAULT_STATS;}
+  catch{return DEFAULT_STATS;}
+}
+function saveStats(st){try{localStorage.setItem(STATS_KEY,JSON.stringify(st));}catch{}}
 
 /* ════════════════════════════════════════════════════════
-   MUSIC SYSTEM
+   DAILY CHALLENGE
 ════════════════════════════════════════════════════════ */
-function useMusicSystem() {
-  const ctxRef   = useRef(null);
-  const masterRef= useRef(null);
-  const loopRef  = useRef(null);
-  const stepRef  = useRef(0);        // current 16th-note step index
-  const nextRef  = useRef(0);        // next scheduled time in AudioContext time
-  const [musicOn,setMusicOn] = useState(false);
-
-  // ── Daft Punk style: 128 BPM house / electronic ──
-  // Tempo
-  const BPM = 128;
-  const BEAT  = 60 / BPM;           // one beat in seconds
-  const S16   = BEAT / 4;           // one 16th note
-
-  // Chord progression (Robot Rock / Around The World feel): Am - F - C - G
-  // Root notes in Hz (played as bass)
-  const ROOTS = [110.00, 87.31, 65.41, 98.00]; // A2, F2, C2, G2
-  // Chord tones (5th + octave) for stabs
-  const STABS = [
-    [110.00,164.81,220.00],  // Am
-    [87.31, 130.81,174.61],  // F
-    [65.41, 98.00, 130.81],  // C
-    [98.00, 146.83,196.00],  // G
-  ];
-  // Lead arpeggio pattern over 16 steps (index into chord tones)
-  const ARP = [0,2,1,2, 0,2,1,2, 0,2,1,2, 0,1,2,1];
-
-  function getCtx(){
-    if(!ctxRef.current){
-      const ctx=new (window.AudioContext||window.webkitAudioContext)();
-      const master=ctx.createGain();
-      master.gain.value=0.15;
-      master.connect(ctx.destination);
-      ctxRef.current=ctx; masterRef.current=master;
-    }
-    return{ctx:ctxRef.current,master:masterRef.current};
-  }
-
-  function playOsc(freq,start,dur,vol,type="sawtooth",filterFreq=null){
-    try{
-      const{ctx,master}=getCtx();
-      const osc=ctx.createOscillator();
-      const g=ctx.createGain();
-      if(filterFreq){
-        const f=ctx.createBiquadFilter();
-        f.type="lowpass"; f.frequency.value=filterFreq;
-        osc.connect(f); f.connect(g);
-      } else { osc.connect(g); }
-      g.connect(master);
-      osc.type=type; osc.frequency.value=freq;
-      g.gain.setValueAtTime(0.001,start);
-      g.gain.linearRampToValueAtTime(vol,start+0.01);
-      g.gain.exponentialRampToValueAtTime(0.001,start+dur*0.9);
-      osc.start(start); osc.stop(start+dur);
-    }catch{}
-  }
-
-  function playKick(t){
-    try{
-      const{ctx,master}=getCtx();
-      const osc=ctx.createOscillator();
-      const g=ctx.createGain();
-      osc.connect(g); g.connect(master);
-      osc.type="sine";
-      osc.frequency.setValueAtTime(160,t);
-      osc.frequency.exponentialRampToValueAtTime(40,t+0.08);
-      g.gain.setValueAtTime(0.8,t);
-      g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
-      osc.start(t); osc.stop(t+0.3);
-    }catch{}
-  }
-
-  function playSnare(t){
-    try{
-      const{ctx,master}=getCtx();
-      // Noise burst
-      const buf=ctx.createBuffer(1,ctx.sampleRate*0.15,ctx.sampleRate);
-      const d=buf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
-      const src=ctx.createBufferSource();
-      src.buffer=buf;
-      const g=ctx.createGain();
-      const f=ctx.createBiquadFilter();
-      f.type="highpass"; f.frequency.value=2000;
-      src.connect(f); f.connect(g); g.connect(master);
-      g.gain.setValueAtTime(0.35,t);
-      g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
-      src.start(t); src.stop(t+0.15);
-    }catch{}
-  }
-
-  function playHihat(t,vol=0.08){
-    try{
-      const{ctx,master}=getCtx();
-      const buf=ctx.createBuffer(1,ctx.sampleRate*0.04,ctx.sampleRate);
-      const d=buf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
-      const src=ctx.createBufferSource();
-      src.buffer=buf;
-      const g=ctx.createGain();
-      const f=ctx.createBiquadFilter();
-      f.type="highpass"; f.frequency.value=8000;
-      src.connect(f); f.connect(g); g.connect(master);
-      g.gain.setValueAtTime(vol,t);
-      g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
-      src.start(t); src.stop(t+0.05);
-    }catch{}
-  }
-
-  function scheduleLoop(){
-    if(!ctxRef.current) return;
-    const{ctx}=getCtx();
-    const now=ctx.currentTime;
-    const lookahead=0.3;
-
-    while(nextRef.current < now+lookahead){
-      const t=nextRef.current;
-      const step=stepRef.current;
-      const beat=Math.floor(step/4);        // 0-3 (one bar = 4 beats)
-      const sixteenth=step%4;               // 0-3 within each beat
-      const chordIdx=Math.floor(step/4)%4;  // chord changes every beat
-
-      // ── Drums ──
-      if(step===0||step===4||step===8||step===12) playKick(t);   // 4-on-floor kick
-      if(step===4||step===12) playSnare(t);                       // snare on 2 & 4
-      playHihat(t, sixteenth===0?0.12:0.06);                     // 16th hi-hats
-
-      // ── Filtered bass (slides between root notes) ──
-      if(sixteenth===0){
-        const bassFreq=ROOTS[chordIdx];
-        playOsc(bassFreq,t,BEAT*0.9,0.55,"sawtooth",600);
-        // Sub bass an octave down
-        playOsc(bassFreq/2,t,BEAT*0.95,0.35,"sine");
-      }
-
-      // ── Lead arp (filtered sawtooth — classic Daft Punk synth) ──
-      const chord=STABS[chordIdx];
-      const note=chord[ARP[step]%chord.length];
-      playOsc(note*2,t,S16*0.7,0.2,"sawtooth",
-        1200+Math.sin(step/16*Math.PI*2)*600);  // filter sweeps with pattern
-
-      // ── Chord stab on beat 1 only ──
-      if(step===0||step===8){
-        STABS[chordIdx].forEach((f,i)=>
-          playOsc(f,t+i*0.005,BEAT*0.35,0.12,"square",800)
-        );
-      }
-
-      stepRef.current=(step+1)%16;
-      nextRef.current+=S16;
-    }
-    loopRef.current=setTimeout(scheduleLoop,100);
-  }
-
-  function startMusic(){
-    const{ctx}=getCtx();
-    if(ctx.state==="suspended") ctx.resume();
-    nextRef.current=ctx.currentTime+0.1;
-    stepRef.current=0;
-    scheduleLoop();
-  }
-  function stopMusic(){
-    if(loopRef.current) clearTimeout(loopRef.current);
-    loopRef.current=null;
-  }
-
-  const toggleMusic=useCallback(()=>{
-    setMusicOn(on=>{
-      if(!on) startMusic(); else stopMusic();
-      return !on;
-    });
-  },[]);
-
-  useEffect(()=>()=>stopMusic(),[]);
-
-  // ── SFX ──
-  function sfxCapture(){
-    try{
-      const{ctx}=getCtx();
-      const now=ctx.currentTime;
-      // Rising synth blip
-      [440,554,659].forEach((f,i)=>playOsc(f,now+i*0.05,0.1,0.5,"square",2000));
-    }catch{}
-  }
-  function sfxAutoGrab(){
-    try{
-      const{ctx}=getCtx();
-      const now=ctx.currentTime;
-      playOsc(330,now,0.08,0.3,"sine");
-      playOsc(440,now+0.04,0.08,0.3,"sine");
-    }catch{}
-  }
-  function sfxEndTurn(){
-    try{
-      const{ctx}=getCtx();
-      playOsc(220,ctx.currentTime,0.06,0.2,"square");
-    }catch{}
-  }
-  function sfxVictory(){
-    try{
-      const{ctx}=getCtx();
-      const now=ctx.currentTime;
-      // Daft Punk style rising fanfare
-      [261.63,329.63,392,523.25,659.25,783.99].forEach((f,i)=>
-        playOsc(f,now+i*0.12,0.3,0.6,"sawtooth",3000)
-      );
-    }catch{}
-  }
-
-  return{musicOn,toggleMusic,sfxCapture,sfxAutoGrab,sfxEndTurn,sfxVictory};
+function getTodayStr(){
+  const d=new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+}
+// Simple seeded LCG random
+function seededRand(seed){
+  let s=seed>>>0;
+  return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};
+}
+function dateSeed(){
+  const str=getTodayStr();
+  let h=0;
+  for(const c of str){h=(Math.imul(31,h)+c.charCodeAt(0))|0;}
+  return Math.abs(h)||12345678;
 }
 
 /* ════════════════════════════════════════════════════════
    HELPERS
 ════════════════════════════════════════════════════════ */
-const NUM_COLORS = 12;
-
-function hexToRgba(hex, a) {
-  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+const NUM_COLORS=12;
+function hexToRgba(hex,a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   return `rgba(${r},${g},${b},${a})`;
 }
 
-/* ─── Board generators ─────────────────────────────── */
-function equalizeBoard(board, BS) {
-  const flat=board.flat(), perColor=Math.floor(flat.length/NUM_COLORS);
-  const counts=Array(NUM_COLORS).fill(0); flat.forEach(c=>counts[c]++);
+/* ════════════════════════════════════════════════════════
+   BOARD GENERATORS
+════════════════════════════════════════════════════════ */
+function equalizeBoard(board,BS,rand=Math.random){
+  const flat=board.flat(),perColor=Math.floor(flat.length/NUM_COLORS);
+  const counts=Array(NUM_COLORS).fill(0);flat.forEach(c=>counts[c]++);
   const byColor=Array.from({length:NUM_COLORS},()=>[]);
   flat.forEach((c,i)=>byColor[c].push(i));
-  byColor.forEach(arr=>{for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}});
+  byColor.forEach(arr=>{for(let i=arr.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}});
   for(let c=0;c<NUM_COLORS;c++) while(counts[c]>perColor+1){
-    const idx=byColor[c].pop(); let minC=0;
+    const idx=byColor[c].pop();let minC=0;
     for(let i=1;i<NUM_COLORS;i++) if(counts[i]<counts[minC]) minC=i;
     flat[idx]=minC;counts[c]--;counts[minC]++;byColor[minC].push(idx);
   }
   return Array.from({length:BS},(_,r)=>flat.slice(r*BS,(r+1)*BS));
 }
-function mkBoardRandom(BS){return equalizeBoard(Array.from({length:BS},()=>Array.from({length:BS},()=>Math.floor(Math.random()*NUM_COLORS))),BS);}
-function mkBoardGrouped(BS){
+function mkBoardRandom(BS,rand=Math.random){
+  return equalizeBoard(Array.from({length:BS},()=>Array.from({length:BS},()=>Math.floor(rand()*NUM_COLORS))),BS,rand);
+}
+function mkBoardGrouped(BS,rand=Math.random){
   const grid=Array.from({length:BS},()=>Array(BS).fill(-1));
   const placed=Array.from({length:BS},()=>Array(BS).fill(false));
   function nbrs(r,c){return[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([nr,nc])=>nr>=0&&nr<BS&&nc>=0&&nc<BS);}
-  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
   for(const[sr,sc]of shuffle(Array.from({length:BS*BS},(_,k)=>[Math.floor(k/BS),k%BS]))){
     if(placed[sr][sc]) continue;
-    const color=Math.floor(Math.random()*NUM_COLORS),size=2+Math.floor(Math.random()*5);
+    const color=Math.floor(rand()*NUM_COLORS),size=2+Math.floor(rand()*5);
     const region=[[sr,sc]];placed[sr][sc]=true;grid[sr][sc]=color;
     while(region.length<size){
       const frontier=[];
       for(const[r,c]of region) for(const[nr,nc]of nbrs(r,c)) if(!placed[nr][nc]) frontier.push([nr,nc]);
       if(!frontier.length) break;
-      const[nr,nc]=frontier[Math.floor(Math.random()*frontier.length)];
+      const[nr,nc]=frontier[Math.floor(rand()*frontier.length)];
       if(placed[nr][nc]) continue;
       placed[nr][nc]=true;grid[nr][nc]=color;region.push([nr,nc]);
     }
@@ -351,10 +178,12 @@ function mkBoardGrouped(BS){
     const col=grid[r][c],ns=nbrs(r,c);
     if(!ns.some(([nr,nc])=>grid[nr][nc]===col)&&ns.length) grid[r][c]=grid[ns[0][0]][ns[0][1]];
   }
-  return equalizeBoard(grid,BS);
+  return equalizeBoard(grid,BS,rand);
 }
 
-/* ─── Core game logic ──────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   GAME LOGIC
+════════════════════════════════════════════════════════ */
 function floodFillGroup(board,ownership,r0,c0,BS){
   if(r0<0||r0>=BS||c0<0||c0>=BS||ownership[r0][c0]!==-1) return [];
   const color=board[r0][c0],seen=new Set(),q=[[r0,c0]],cells=[];
@@ -370,6 +199,7 @@ function playerAdjacent(o,r,c,p,BS){
   return[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].some(([nr,nc])=>nr>=0&&nr<BS&&nc>=0&&nc<BS&&o[nr][nc]===p);
 }
 function isAdjacentToPlayer(o,r,c,p,BS){return playerAdjacent(o,r,c,p,BS);}
+
 function captureGroup(board,o,pid,r0,c0,BS){
   const own=o.map(row=>[...row]),cap=new Set();
   for(const[r,c]of floodFillGroup(board,own,r0,c0,BS)){own[r][c]=pid;cap.add(r*BS+c);}
@@ -411,10 +241,8 @@ function previewCapture(board,o,pid,r0,c0,mode,BS){
 function autoClaimAdjacent(board,o,pid,playerDefs,palette,BS){
   const myCI=palette.findIndex(bc=>bc.hex===playerDefs[pid].hex);
   if(myCI<0) return{newOwnership:o,autoClaimed:new Set()};
-  const own=o.map(row=>[...row]),ac=new Set();
-  let changed=true;
-  while(changed){
-    changed=false;
+  const own=o.map(row=>[...row]),ac=new Set();let changed=true;
+  while(changed){changed=false;
     for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
       if(own[r][c]!==-1||board[r][c]!==myCI||!playerAdjacent(own,r,c,pid,BS)) continue;
       for(const[r2,c2]of floodFillGroup(board,own,r,c,BS)){own[r2][c2]=pid;ac.add(r2*BS+c2);changed=true;}
@@ -425,8 +253,7 @@ function autoClaimAdjacent(board,o,pid,playerDefs,palette,BS){
 function applyEnclosures(board,o,playerDefs,numPlayers,palette,BS){
   const pci=playerDefs.slice(0,numPlayers).map(d=>palette.findIndex(bc=>bc.hex===d.hex));
   let own=o.map(row=>[...row]);const enc=new Set();let changed=true;
-  while(changed){
-    changed=false;
+  while(changed){changed=false;
     const vis=Array.from({length:BS},()=>Array(BS).fill(false));
     for(let r0=0;r0<BS;r0++) for(let c0=0;c0<BS;c0++){
       if(own[r0][c0]!==-1||vis[r0][c0]) continue;
@@ -440,15 +267,13 @@ function applyEnclosures(board,o,playerDefs,numPlayers,palette,BS){
         }
       }
       if(bp.size!==1) continue;
-      const enc_player=[...bp][0];
-      if(!region.every(([r,c])=>{const ci=board[r][c];return pci.every((p,i)=>i===enc_player||p!==ci);})) continue;
-      for(const[r,c]of region){own[r][c]=enc_player;enc.add(r*BS+c);changed=true;}
+      const ep=[...bp][0];
+      if(!region.every(([r,c])=>{const ci=board[r][c];return pci.every((p,i)=>i===ep||p!==ci);})) continue;
+      for(const[r,c]of region){own[r][c]=ep;enc.add(r*BS+c);changed=true;}
     }
   }
   return{newOwnership:own,enclosed:enc};
 }
-
-/* ─── AI logic ──────────────────────────────────────── */
 function getClickableCellsForPlayer(board,ownership,pid,playerDefs,palette,BS){
   const myCI=palette.findIndex(bc=>bc.hex===playerDefs[pid].hex);
   const s=new Set();
@@ -460,6 +285,58 @@ function getClickableCellsForPlayer(board,ownership,pid,playerDefs,palette,BS){
   return s;
 }
 
+/* ════════════════════════════════════════════════════════
+   FOG OF WAR
+════════════════════════════════════════════════════════ */
+function computeFogVisibility(ownership,playerIdx,BS,range){
+  const vis=new Set();
+  const queue=[];
+  for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
+    if(ownership[r][c]===playerIdx){queue.push([r,c,0]);vis.add(r*BS+c);}
+  }
+  const seen=new Set(vis);
+  let head=0;
+  while(head<queue.length){
+    const[r,c,d]=queue[head++];
+    if(d>=range) continue;
+    for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){
+      if(nr<0||nr>=BS||nc<0||nc>=BS) continue;
+      const k=nr*BS+nc;if(seen.has(k)) continue;
+      seen.add(k);vis.add(k);queue.push([nr,nc,d+1]);
+    }
+  }
+  return vis;
+}
+
+/* ════════════════════════════════════════════════════════
+   MATHEMATICAL VICTORY CHECK
+════════════════════════════════════════════════════════ */
+function checkMathematicalVictory(ownership,numPlayers,teamMode,BS){
+  const TOTAL=BS*BS;
+  const scores=Array(numPlayers).fill(0);let remaining=0;
+  for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
+    const v=ownership[r][c];if(v>=0) scores[v]++;else remaining++;
+  }
+  if(teamMode){
+    const t0=scores[0]+(scores[2]||0),t1=scores[1]+(scores[3]||0);
+    if(t0>t1+remaining) return 0;if(t1>t0+remaining) return 1;return -1;
+  }
+  for(let i=0;i<numPlayers;i++){
+    let maxOther=0;
+    for(let j=0;j<numPlayers;j++) if(j!==i) maxOther=Math.max(maxOther,scores[j]);
+    if(scores[i]>maxOther+remaining) return i;
+  }
+  return -1;
+}
+
+/* ════════════════════════════════════════════════════════
+   AI LOGIC
+════════════════════════════════════════════════════════ */
+const AI_LEVELS={
+  recruit:{key:"recruit",label:"Recruit",color:"#2ED573",desc:"Makes random moves"},
+  veteran:{key:"veteran",label:"Veteran",color:"#FFD32A",desc:"Picks the biggest group available"},
+  master: {key:"master", label:"Master", color:"#FF4757",desc:"Maximises gain and blocks your best move"},
+};
 function scoreMove(board,ownership,pid,r,c,cascade,playerDefs,palette,numPlayers,BS){
   const doC=cascade==="full"?cascadeCapture:captureGroup;
   const{newOwnership:after}=doC(board,ownership,pid,r,c,BS);
@@ -469,206 +346,415 @@ function scoreMove(board,ownership,pid,r,c,cascade,playerDefs,palette,numPlayers
     if(afterEnc[r2][c2]===pid&&ownership[r2][c2]===-1) gained++;
   return{gained,afterEnc};
 }
-
 function getAIMove(board,ownership,pid,playerDefs,palette,BS,cascadeMode,aiLevel,numPlayers){
   const cells=getClickableCellsForPlayer(board,ownership,pid,playerDefs,palette,BS);
   const candidates=[...cells].map(k=>[Math.floor(k/BS),k%BS]);
   if(!candidates.length) return null;
-
-  if(aiLevel==="recruit"){
-    return candidates[Math.floor(Math.random()*candidates.length)];
-  }
-
-  // Score every candidate
+  if(aiLevel==="recruit") return candidates[Math.floor(Math.random()*candidates.length)];
   const scored=candidates.map(([r,c])=>{
     const{gained,afterEnc}=scoreMove(board,ownership,pid,r,c,cascadeMode,playerDefs,palette,numPlayers,BS);
     return{r,c,gained,afterEnc};
   }).sort((a,b)=>b.gained-a.gained);
-
   if(aiLevel==="veteran") return[scored[0].r,scored[0].c];
-
-  // Master: among top 5 moves, pick the one that minimises opponent's best reply
   const top=scored.slice(0,Math.min(5,scored.length));
   const humanIdx=playerDefs.findIndex((d,i)=>i!==pid&&!d.isAI);
   if(humanIdx<0) return[top[0].r,top[0].c];
-
-  let bestMove=top[0],bestNetScore=-Infinity;
+  let bestMove=top[0],bestNet=-Infinity;
   for(const move of top){
-    // Find human's best reply on this board
-    const humanCells=getClickableCellsForPlayer(board,move.afterEnc,humanIdx,playerDefs,palette,BS);
-    let maxHumanGain=0;
-    for(const hk of humanCells){
-      const hr=Math.floor(hk/BS),hc=hk%BS;
-      const{gained}=scoreMove(board,move.afterEnc,humanIdx,hr,hc,cascadeMode,playerDefs,palette,numPlayers,BS);
-      if(gained>maxHumanGain) maxHumanGain=gained;
-      if(maxHumanGain>30) break; // early exit if already large
+    const hc=getClickableCellsForPlayer(board,move.afterEnc,humanIdx,playerDefs,palette,BS);
+    let maxHG=0;
+    for(const hk of hc){
+      const hr=Math.floor(hk/BS),hcc=hk%BS;
+      const{gained}=scoreMove(board,move.afterEnc,humanIdx,hr,hcc,cascadeMode,playerDefs,palette,numPlayers,BS);
+      if(gained>maxHG) maxHG=gained;if(maxHG>30) break;
     }
-    const net=move.gained*1.5-maxHumanGain;
-    if(net>bestNetScore){bestNetScore=net;bestMove=move;}
+    const net=move.gained*1.5-maxHG;
+    if(net>bestNet){bestNet=net;bestMove=move;}
   }
   return[bestMove.r,bestMove.c];
 }
 
 /* ════════════════════════════════════════════════════════
+   MUSIC
+════════════════════════════════════════════════════════ */
+function useMusicSystem(){
+  const ctxRef=useRef(null),masterRef=useRef(null),loopRef=useRef(null);
+  const stepRef=useRef(0),nextRef=useRef(0);
+  const[musicOn,setMusicOn]=useState(false);
+  const BPM=128,BEAT=60/BPM,S16=BEAT/4;
+  const ROOTS=[110.00,87.31,65.41,98.00];
+  const STABS=[[110.00,164.81,220.00],[87.31,130.81,174.61],[65.41,98.00,130.81],[98.00,146.83,196.00]];
+  const ARP=[0,2,1,2,0,2,1,2,0,2,1,2,0,1,2,1];
+  function getCtx(){
+    if(!ctxRef.current){
+      const ctx=new(window.AudioContext||window.webkitAudioContext)();
+      const m=ctx.createGain();m.gain.value=0.13;m.connect(ctx.destination);
+      ctxRef.current=ctx;masterRef.current=m;
+    }
+    return{ctx:ctxRef.current,master:masterRef.current};
+  }
+  function playOsc(freq,start,dur,vol,type="sawtooth",filterFreq=null){
+    try{
+      const{ctx,master}=getCtx();
+      const osc=ctx.createOscillator(),g=ctx.createGain();
+      if(filterFreq){const f=ctx.createBiquadFilter();f.type="lowpass";f.frequency.value=filterFreq;osc.connect(f);f.connect(g);}
+      else osc.connect(g);
+      g.connect(master);osc.type=type;osc.frequency.value=freq;
+      g.gain.setValueAtTime(0.001,start);g.gain.linearRampToValueAtTime(vol,start+0.01);
+      g.gain.exponentialRampToValueAtTime(0.001,start+dur*0.9);osc.start(start);osc.stop(start+dur);
+    }catch{}
+  }
+  function playKick(t){
+    try{const{ctx,master}=getCtx();const osc=ctx.createOscillator(),g=ctx.createGain();
+      osc.connect(g);g.connect(master);osc.type="sine";
+      osc.frequency.setValueAtTime(160,t);osc.frequency.exponentialRampToValueAtTime(40,t+0.08);
+      g.gain.setValueAtTime(0.8,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+      osc.start(t);osc.stop(t+0.3);}catch{}
+  }
+  function playSnare(t){
+    try{const{ctx,master}=getCtx();
+      const buf=ctx.createBuffer(1,ctx.sampleRate*0.15,ctx.sampleRate);
+      const d=buf.getChannelData(0);for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+      const src=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+      f.type="highpass";f.frequency.value=2000;src.buffer=buf;
+      src.connect(f);f.connect(g);g.connect(master);
+      g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+      src.start(t);src.stop(t+0.15);}catch{}
+  }
+  function playHat(t,vol=0.07){
+    try{const{ctx,master}=getCtx();
+      const buf=ctx.createBuffer(1,ctx.sampleRate*0.04,ctx.sampleRate);
+      const d=buf.getChannelData(0);for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+      const src=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+      f.type="highpass";f.frequency.value=8000;src.buffer=buf;
+      src.connect(f);f.connect(g);g.connect(master);
+      g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+      src.start(t);src.stop(t+0.05);}catch{}
+  }
+  function scheduleLoop(){
+    if(!ctxRef.current) return;
+    const{ctx}=getCtx(),now=ctx.currentTime;
+    while(nextRef.current<now+0.3){
+      const t=nextRef.current,step=stepRef.current;
+      const beat=Math.floor(step/4),sixth=step%4,ci=Math.floor(step/4)%4;
+      if(step===0||step===4||step===8||step===12) playKick(t);
+      if(step===4||step===12) playSnare(t);
+      playHat(t,sixth===0?0.11:0.05);
+      if(sixth===0){playOsc(ROOTS[ci],t,BEAT*0.9,0.5,"sawtooth",600);playOsc(ROOTS[ci]/2,t,BEAT*0.95,0.3,"sine");}
+      const ch=STABS[ci],note=ch[ARP[step]%ch.length];
+      playOsc(note*2,t,S16*0.7,0.18,"sawtooth",1200+Math.sin(step/16*Math.PI*2)*600);
+      if(step===0||step===8) STABS[ci].forEach((f,i)=>playOsc(f,t+i*0.005,BEAT*0.35,0.1,"square",800));
+      stepRef.current=(step+1)%16;nextRef.current+=S16;
+    }
+    loopRef.current=setTimeout(scheduleLoop,100);
+  }
+  function startMusic(){const{ctx}=getCtx();if(ctx.state==="suspended")ctx.resume();nextRef.current=ctx.currentTime+0.1;stepRef.current=0;scheduleLoop();}
+  function stopMusic(){if(loopRef.current)clearTimeout(loopRef.current);loopRef.current=null;}
+  const toggleMusic=useCallback(()=>{setMusicOn(on=>{if(!on)startMusic();else stopMusic();return!on;});},[]);
+  useEffect(()=>()=>stopMusic(),[]);
+  function sfxCapture(){try{const{ctx}=getCtx();const now=ctx.currentTime;[440,554,659].forEach((f,i)=>playOsc(f,now+i*0.05,0.1,0.5,"square",2000));}catch{}}
+  function sfxAutoGrab(){try{const{ctx}=getCtx();const now=ctx.currentTime;playOsc(330,now,0.08,0.3,"sine");playOsc(440,now+0.04,0.08,0.3,"sine");}catch{}}
+  function sfxEndTurn(){try{const{ctx}=getCtx();playOsc(220,ctx.currentTime,0.06,0.2,"square");}catch{}}
+  function sfxVictory(){try{const{ctx}=getCtx();const now=ctx.currentTime;[261.63,329.63,392,523.25,659.25,783.99].forEach((f,i)=>playOsc(f,now+i*0.12,0.3,0.6,"sawtooth",3000));}catch{}}
+  function sfxCombo(){try{const{ctx}=getCtx();const now=ctx.currentTime;[523,659,784,1047].forEach((f,i)=>playOsc(f,now+i*0.07,0.1,0.5,"square",3000));}catch{}}
+  function sfxTimer(){try{const{ctx}=getCtx();playOsc(880,ctx.currentTime,0.05,0.3,"square");}catch{}}
+  return{musicOn,toggleMusic,sfxCapture,sfxAutoGrab,sfxEndTurn,sfxVictory,sfxCombo,sfxTimer};
+}
+
+/* ════════════════════════════════════════════════════════
+   INSTRUCTIONS
+════════════════════════════════════════════════════════ */
+const INSTRUCTIONS={
+  general:{title:"HOW TO PLAY",icon:"🎮",sections:[
+    {heading:"GOAL",body:"Capture more cells than your opponents. The player or team with the most cells wins when no one can be beaten, or when rounds run out."},
+    {heading:"YOUR TURN",body:"Tap any neutral (muted) cell bordering your territory. The whole connected colour group joins you in one move. Hover to preview what you'd capture."},
+    {heading:"YOUR COLOUR ANYWHERE",body:"Any neutral cell matching your team's colour is clickable from anywhere on the board — use this to establish outposts on the other side."},
+    {heading:"AUTO-JOINS",body:"At the start of your turn, neutral cells of your own colour touching your territory are claimed automatically for free."},
+    {heading:"ENCLOSURES",body:"Fully surround neutral cells with your territory or walls and they are claimed automatically — unless another player's colour is inside (they can still reach in)."},
+    {heading:"RE-CLICK",body:"Tap a different group before hitting End Turn to replace your capture with a different choice."},
+  ]},
+  easy:{title:"EASY MODE",icon:"🟢",sections:[
+    {heading:"BOARD",body:"Pixels come in blobs of 2–6 cells. No isolated singletons. Groups are large and easy to read."},
+    {heading:"CASCADE",body:"Capturing a colour sweeps in ALL other patches of that colour touching any of your territory at once."},
+    {heading:"LEGEND",body:"Tap a colour swatch in the legend row to highlight all cells of that colour and dim everything else — great for planning."},
+    {heading:"SCORES",body:"Full live scores always visible."},
+  ]},
+  normal:{title:"NORMAL MODE",icon:"🟡",sections:[
+    {heading:"BOARD",body:"Pixels in blobs of 2–6 cells. No singletons."},
+    {heading:"NO CASCADE",body:"Only the exact connected group you click joins you. Disconnected patches of the same colour elsewhere are NOT swept in."},
+    {heading:"HIDDEN SCORES",body:"Scores hidden during play. Use 👁 to peek at exact numbers."},
+  ]},
+  hard:{title:"HARD MODE",icon:"🔴",sections:[
+    {heading:"BOARD",body:"Fully random pixel placement. Any group size including singletons."},
+    {heading:"CASCADE",body:"Same as Easy — capturing sweeps in all same-colour patches touching your territory."},
+    {heading:"FOG OF WAR",body:"You can only see cells within 4 steps of your territory. Everything else is hidden until you expand into it."},
+    {heading:"HIDDEN SCORES",body:"Scores hidden. Use 👁 to peek."},
+  ]},
+  veryhard:{title:"VERY HARD MODE",icon:"🟣",sections:[
+    {heading:"BOARD",body:"Fully random. Any group size."},
+    {heading:"NO CASCADE",body:"Only the exact group you click joins you. No chaining whatsoever."},
+    {heading:"FOG OF WAR",body:"Tighter fog — only 3 cells of visibility from your territory. Very limited information."},
+    {heading:"HIDDEN SCORES",body:"Scores hidden."},
+  ]},
+  vscomputer:{title:"VS COMPUTER",icon:"🤖",sections:[
+    {heading:"RECRUIT",body:"Picks random legal moves. Good for learning."},
+    {heading:"VETERAN",body:"Always picks whichever cell captures the most cells that turn. Consistent but predictable."},
+    {heading:"MASTER",body:"Scores its top 5 moves then simulates your best possible reply, picking what maximises its gain while minimising yours. Hard to beat."},
+    {heading:"START POSITION",body:"Veteran and Master start inside their colour's biggest group on the board — giving them a strong opening automatically."},
+  ]},
+  teammode:{title:"TEAM MODE (2v2)",icon:"⚔️",sections:[
+    {heading:"TEAMS",body:"Players 1 & 3 form Team Gold (▲). Players 2 & 4 form Team Violet (▼). Each plays their own turn individually."},
+    {heading:"WINNING",body:"Your team wins when the two of you combined hold more territory than the opposing pair."},
+    {heading:"STRATEGY",body:"Expand towards your teammate to create walls that trap opponents. Your teammate's territory counts for enclosures too."},
+  ]},
+};
+
+function InstructionsModal({topic,onClose}){
+  const data=INSTRUCTIONS[topic]||INSTRUCTIONS.general;
+  const[sec,setSec]=useState(0);
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,0.88)",
+      display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",
+      fontFamily:"'Space Mono',monospace"}} onClick={onClose}>
+      <div style={{background:"#0d0d1a",border:"1px solid #2a2a4a",borderRadius:16,
+        width:"100%",maxWidth:340,maxHeight:"80vh",display:"flex",flexDirection:"column",
+        boxShadow:"0 0 60px rgba(0,0,0,0.9)",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",
+          borderBottom:"1px solid #1a1a2e",flexShrink:0}}>
+          <span style={{fontSize:24}}>{data.icon}</span>
+          <span style={{flex:1,fontSize:11,fontWeight:"bold",letterSpacing:3,color:"#eee"}}>{data.title}</span>
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",cursor:"pointer",
+            border:"1px solid #333",background:"transparent",color:"#aaa",fontSize:14,
+            fontFamily:"'Space Mono',monospace",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+        {data.sections.length>1&&(
+          <div style={{display:"flex",gap:4,padding:"10px 12px",overflowX:"auto",
+            borderBottom:"1px solid #1a1a2e",flexShrink:0}}>
+            {data.sections.map((s,i)=>(
+              <button key={i} onClick={()=>setSec(i)} style={{flexShrink:0,padding:"4px 10px",
+                borderRadius:20,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:7,letterSpacing:1,
+                border:`1px solid ${i===sec?"#A29BFE":"#2a2a4a"}`,transition:"all 0.15s",
+                background:i===sec?"rgba(162,155,254,0.2)":"transparent",
+                color:i===sec?"#A29BFE":"#666"}}>{s.heading}</button>
+            ))}
+          </div>
+        )}
+        <div style={{flex:1,overflowY:"auto",padding:"20px 16px"}}>
+          <div style={{fontSize:10,fontWeight:"bold",letterSpacing:2,color:"#A29BFE",marginBottom:10}}>
+            {data.sections[sec].heading}
+          </div>
+          <div style={{fontSize:11,color:"#ccc",lineHeight:1.9,letterSpacing:0.5}}>{data.sections[sec].body}</div>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+          padding:"10px 16px",borderTop:"1px solid #1a1a2e",flexShrink:0}}>
+          <button onClick={()=>setSec(s=>Math.max(0,s-1))} disabled={sec===0} style={{
+            padding:"6px 14px",borderRadius:8,cursor:sec===0?"default":"pointer",
+            border:"1px solid #2a2a4a",background:"transparent",
+            color:sec===0?"#2a2a4a":"#aaa",fontFamily:"'Space Mono',monospace",fontSize:10}}>← PREV</button>
+          <span style={{color:"#444",fontSize:9}}>{sec+1} / {data.sections.length}</span>
+          <button onClick={()=>setSec(s=>Math.min(data.sections.length-1,s+1))}
+            disabled={sec===data.sections.length-1} style={{
+            padding:"6px 14px",borderRadius:8,cursor:sec===data.sections.length-1?"default":"pointer",
+            border:"1px solid #2a2a4a",background:"transparent",
+            color:sec===data.sections.length-1?"#2a2a4a":"#aaa",fontFamily:"'Space Mono',monospace",fontSize:10}}>NEXT →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
+   STATS SCREEN
+════════════════════════════════════════════════════════ */
+function StatsScreen({onClose,T}){
+  const stats=loadStats();
+  const winRate=stats.gamesPlayed>0?Math.round(stats.wins/stats.gamesPlayed*100):0;
+  function resetStats(){if(window.confirm("Reset all stats?"))saveStats(DEFAULT_STATS);}
+  const row=(label,value)=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+      padding:"8px 0",borderBottom:`1px solid ${T.border}`}}>
+      <span style={{fontSize:9,color:T.textDim,letterSpacing:1}}>{label}</span>
+      <span style={{fontSize:13,fontWeight:"bold",color:T.text}}>{value}</span>
+    </div>
+  );
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",
+      fontFamily:T.font,color:T.text,boxSizing:"border-box"}}>
+      <style>{GLOBAL_CSS}</style>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",
+        borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+        <button onClick={onClose} style={{padding:"6px 12px",borderRadius:6,cursor:"pointer",
+          border:`1px solid ${T.btnBorder}`,background:"transparent",color:T.btnText,
+          fontFamily:T.font,fontSize:10}}>← BACK</button>
+        <div style={{flex:1,fontSize:12,fontWeight:"bold",letterSpacing:3,color:T.text}}>YOUR STATS</div>
+        <button onClick={resetStats} style={{padding:"6px 10px",borderRadius:6,cursor:"pointer",
+          border:"1px solid #FF4757",background:"transparent",color:"#FF4757",
+          fontFamily:T.font,fontSize:9}}>RESET</button>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"20px 16px",maxWidth:400,margin:"0 auto",width:"100%"}}>
+        <div style={{fontSize:9,letterSpacing:3,color:T.textDim,marginBottom:12}}>OVERALL</div>
+        {row("Games Played",stats.gamesPlayed)}
+        {row("Wins",stats.wins)}
+        {row("Losses",stats.losses)}
+        {row("Win Rate",`${winRate}%`)}
+        {row("Total Cells Captured",stats.totalCaptures?.toLocaleString()||0)}
+        {row("Biggest Single Capture",stats.biggestSingleCapture||0)}
+        {row("Total Enclosures",stats.encloseCount||0)}
+
+        <div style={{fontSize:9,letterSpacing:3,color:T.textDim,marginTop:20,marginBottom:12}}>VS COMPUTER</div>
+        {["recruit","veteran","master"].map(lvl=>{
+          const d=stats.vsComputer?.[lvl]||{wins:0,losses:0};
+          const total=d.wins+d.losses;
+          return row(`${AI_LEVELS[lvl].label}`,total?`${d.wins}W ${d.losses}L (${Math.round(d.wins/total*100)}%)`:"-");
+        })}
+
+        <div style={{fontSize:9,letterSpacing:3,color:T.textDim,marginTop:20,marginBottom:12}}>DAILY CHALLENGE</div>
+        {row("Current Streak",`${stats.daily?.streak||0} 🔥`)}
+        {row("Total Completions",stats.daily?.completions||0)}
+        {row("Best Score",stats.daily?.bestScore||0)}
+
+        <div style={{marginTop:24,fontSize:9,color:T.textFaint,textAlign:"center",lineHeight:1.8}}>
+          Stats are stored on this device.<br/>
+          Cross-device sync requires an account (coming soon).
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════
    EDITOR SCREEN
 ════════════════════════════════════════════════════════ */
-function EditorScreen({config,onSave,onClose}){
+function EditorScreen({config,onSave,onClose,T}){
   const[draft,setDraft]=useState(JSON.parse(JSON.stringify(config)));
   const[tab,setTab]=useState("general");
   const[saved,setSaved]=useState(false);
-
-  function update(path,value){
-    setDraft(prev=>{
-      const next=JSON.parse(JSON.stringify(prev));
-      const keys=path.split(".");let obj=next;
-      for(let i=0;i<keys.length-1;i++) obj=obj[keys[i]];
-      obj[keys[keys.length-1]]=value;
-      return next;
-    });setSaved(false);
-  }
-  function updateArr(ap,idx,field,value){
-    setDraft(prev=>{
-      const next=JSON.parse(JSON.stringify(prev));
-      const keys=ap.split(".");let obj=next;
-      for(const k of keys) obj=obj[k];
-      obj[idx][field]=value;
-      return next;
-    });setSaved(false);
-  }
+  function update(path,value){setDraft(prev=>{const next=JSON.parse(JSON.stringify(prev));const keys=path.split(".");let obj=next;for(let i=0;i<keys.length-1;i++) obj=obj[keys[i]];obj[keys[keys.length-1]]=value;return next;});setSaved(false);}
+  function updateArr(ap,idx,field,value){setDraft(prev=>{const next=JSON.parse(JSON.stringify(prev));const keys=ap.split(".");let obj=next;for(const k of keys) obj=obj[k];obj[idx][field]=value;return next;});setSaved(false);}
   function handleSave(){saveConfig(draft);onSave(draft);setSaved(true);setTimeout(()=>setSaved(false),2000);}
   function handleReset(){if(window.confirm("Reset all settings to defaults?")){saveConfig(DEFAULT_CONFIG);onSave(DEFAULT_CONFIG);setDraft(JSON.parse(JSON.stringify(DEFAULT_CONFIG)));}}
-
-  const inp={background:"#0d0d1a",border:"1px solid #333",borderRadius:6,color:"#eee",
-    fontFamily:"'Space Mono',monospace",fontSize:11,padding:"6px 8px",width:"100%",outline:"none"};
-  const lbl={fontSize:8,letterSpacing:2,color:"#888",marginBottom:4,display:"block"};
-
-  const TABS=[{key:"general",label:"General"},{key:"teams",label:"Teams"},
-    {key:"boardcols",label:"Colours"},{key:"difficulty",label:"Difficulty"},{key:"text",label:"Text"}];
-
+  const inp={background:T.cardBg,border:`1px solid ${T.border}`,borderRadius:6,color:T.text,
+    fontFamily:T.font,fontSize:11,padding:"6px 8px",width:"100%",outline:"none"};
+  const lbl={fontSize:8,letterSpacing:2,color:T.textDim,marginBottom:4,display:"block"};
+  const TABS=[{key:"general",label:"General"},{key:"teams",label:"Teams"},{key:"boardcols",label:"Colours"},
+    {key:"difficulty",label:"Difficulty"},{key:"text",label:"Text"},{key:"theme",label:"Theme"}];
   return(
-    <div style={{minHeight:"100vh",background:"#080812",display:"flex",flexDirection:"column",
-      fontFamily:"'Space Mono',monospace",color:"white",boxSizing:"border-box"}}>
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",
+      fontFamily:T.font,color:T.text,boxSizing:"border-box"}}>
       <style>{GLOBAL_CSS}</style>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",
-        borderBottom:"1px solid #1a1a2e",flexShrink:0}}>
+        borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
         <button onClick={onClose} style={{padding:"6px 12px",borderRadius:6,cursor:"pointer",
-          border:"1px solid #444",background:"transparent",color:"#ccc",
-          fontFamily:"'Space Mono',monospace",fontSize:10}}>← BACK</button>
-        <div style={{flex:1,fontSize:12,fontWeight:"bold",letterSpacing:3,color:"#eee"}}>EDIT CONTENT</div>
+          border:`1px solid ${T.btnBorder}`,background:"transparent",color:T.btnText,fontFamily:T.font,fontSize:10}}>← BACK</button>
+        <div style={{flex:1,fontSize:12,fontWeight:"bold",letterSpacing:3,color:T.text}}>EDIT CONTENT</div>
         <button onClick={handleReset} style={{padding:"6px 10px",borderRadius:6,cursor:"pointer",
-          border:"1px solid #FF4757",background:"transparent",color:"#FF4757",
-          fontFamily:"'Space Mono',monospace",fontSize:9}}>RESET</button>
+          border:"1px solid #FF4757",background:"transparent",color:"#FF4757",fontFamily:T.font,fontSize:9}}>RESET</button>
         <button onClick={handleSave} style={{padding:"6px 14px",borderRadius:6,cursor:"pointer",border:"none",
-          background:saved?"#2ED573":"#5352ED",color:"white",
-          fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:"bold",transition:"background 0.3s"}}>
+          background:saved?"#2ED573":"#5352ED",color:"white",fontFamily:T.font,fontSize:10,fontWeight:"bold",transition:"background 0.3s"}}>
           {saved?"SAVED ✓":"SAVE"}
         </button>
       </div>
-      <div style={{display:"flex",borderBottom:"1px solid #1a1a2e",flexShrink:0}}>
+      <div style={{display:"flex",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)} style={{flex:1,padding:"8px 4px",cursor:"pointer",
-            border:"none",background:tab===t.key?"#0d0d1a":"transparent",
-            color:tab===t.key?"#A29BFE":"#777",fontFamily:"'Space Mono',monospace",fontSize:7,letterSpacing:1,
-            borderBottom:tab===t.key?"2px solid #A29BFE":"2px solid transparent"}}>{t.label}</button>
+            border:"none",background:tab===t.key?T.cardBg:"transparent",
+            color:tab===t.key?T.accentColor:T.textDim,fontFamily:T.font,fontSize:7,letterSpacing:1,
+            borderBottom:tab===t.key?`2px solid ${T.accentColor}`:"2px solid transparent"}}>{t.label}</button>
         ))}
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"16px"}}>
         {tab==="general"&&<div>
           {[["GAME NAME","gameName"],["TAGLINE","tagline"]].map(([l,k])=>(
-            <div key={k} style={{marginBottom:16}}>
-              <label style={lbl}>{l}</label>
-              <input style={inp} value={draft[k]} onChange={e=>update(k,e.target.value)}/>
-            </div>
+            <div key={k} style={{marginBottom:16}}><label style={lbl}>{l}</label><input style={inp} value={draft[k]} onChange={e=>update(k,e.target.value)}/></div>
           ))}
-          <div style={{marginBottom:16}}>
-            <label style={lbl}>MAX ROUNDS</label>
-            <input style={{...inp,width:80}} type="number" min={5} max={100} value={draft.maxRounds}
-              onChange={e=>update("maxRounds",parseInt(e.target.value)||30)}/>
+          <div style={{marginBottom:16}}><label style={lbl}>MAX ROUNDS (0 = unlimited)</label>
+            <input style={{...inp,width:80}} type="number" min={0} max={100} value={draft.maxRounds} onChange={e=>update("maxRounds",parseInt(e.target.value)||0)}/>
           </div>
-          <div style={{marginBottom:16}}>
-            <label style={lbl}>MULTIPLAYER WIN TEXT</label>
+          <div style={{marginBottom:16}}><label style={lbl}>MULTIPLAYER WIN TEXT</label>
             <input style={inp} value={draft.multiWinText} onChange={e=>update("multiWinText",e.target.value)}/>
-            <div style={{fontSize:8,color:"#666",marginTop:4}}>e.g. "Cyan Storm {draft.multiWinText}"</div>
           </div>
-          <div style={{marginBottom:16}}>
-            <label style={lbl}>VICTORY ASSURED TEXT</label>
+          <div style={{marginBottom:16}}><label style={lbl}>VICTORY ASSURED TEXT</label>
             <input style={inp} value={draft.victoryAssuredText} onChange={e=>update("victoryAssuredText",e.target.value)}/>
           </div>
-          <div>
-            <label style={lbl}>GRID SIZE LABELS</label>
+          <div><label style={lbl}>GRID SIZE LABELS</label>
             {Object.entries(draft.gridSizes).map(([k,gs])=>(
               <div key={k} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
-                <span style={{fontSize:8,color:"#777",width:50}}>{k.toUpperCase()}</span>
-                <input style={{...inp}} value={gs.label} placeholder="Label"
-                  onChange={e=>{const d=JSON.parse(JSON.stringify(draft));d.gridSizes[k].label=e.target.value;setDraft(d);setSaved(false);}}/>
-                <input style={{...inp}} value={gs.sub} placeholder="12 × 12"
-                  onChange={e=>{const d=JSON.parse(JSON.stringify(draft));d.gridSizes[k].sub=e.target.value;setDraft(d);setSaved(false);}}/>
+                <span style={{fontSize:8,color:T.textDim,width:60}}>{k.toUpperCase()}</span>
+                <input style={{...inp}} value={gs.label} onChange={e=>{const d=JSON.parse(JSON.stringify(draft));d.gridSizes[k].label=e.target.value;setDraft(d);setSaved(false);}}/>
+                <input style={{...inp}} value={gs.sub} onChange={e=>{const d=JSON.parse(JSON.stringify(draft));d.gridSizes[k].sub=e.target.value;setDraft(d);setSaved(false);}}/>
               </div>
             ))}
           </div>
         </div>}
-
         {tab==="teams"&&<div>
-          <div style={{fontSize:9,color:"#888",marginBottom:12,lineHeight:1.8}}>Team names shown in-game. Hex values are fixed.</div>
+          <div style={{fontSize:9,color:T.textDim,marginBottom:12,lineHeight:1.8}}>Team names shown in-game. Hex values are fixed.</div>
           {draft.teams.map((t,i)=>(
             <div key={i} style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
-              <div style={{width:32,height:32,borderRadius:8,background:t.hex,
-                boxShadow:`0 0 8px ${t.hex}`,flexShrink:0}}/>
-              <div style={{flex:1}}>
-                <label style={lbl}>TEAM {i+1}</label>
+              <div style={{width:32,height:32,borderRadius:8,background:t.hex,boxShadow:`0 0 8px ${t.hex}`,flexShrink:0}}/>
+              <div style={{flex:1}}><label style={lbl}>TEAM {i+1}</label>
                 <input style={inp} value={t.name} onChange={e=>updateArr("teams",i,"name",e.target.value)}/>
               </div>
             </div>
           ))}
         </div>}
-
         {tab==="boardcols"&&<div>
-          <div style={{fontSize:9,color:"#888",marginBottom:12,lineHeight:1.8}}>Names shown on hover. Hex changes the actual board colour.</div>
+          <div style={{fontSize:9,color:T.textDim,marginBottom:12,lineHeight:1.8}}>Names shown on hover. Hex changes the board colour.</div>
           {draft.boardColours.map((bc,i)=>(
             <div key={i} style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
               <div style={{width:28,height:28,borderRadius:6,background:bc.hex,flexShrink:0}}/>
-              <input value={bc.hex} onChange={e=>updateArr("boardColours",i,"hex",e.target.value)}
-                style={{...inp,width:90,fontFamily:"monospace"}}/>
+              <input value={bc.hex} onChange={e=>updateArr("boardColours",i,"hex",e.target.value)} style={{...inp,width:90,fontFamily:"monospace"}}/>
               <input style={inp} value={bc.name} onChange={e=>updateArr("boardColours",i,"name",e.target.value)}/>
             </div>
           ))}
         </div>}
-
         {tab==="difficulty"&&<div>
           {Object.entries(draft.difficulties).map(([k,d])=>(
             <div key={k} style={{marginBottom:16,padding:12,borderRadius:8,
               border:`1px solid ${hexToRgba(d.color,0.4)}`,background:hexToRgba(d.color,0.05)}}>
               <div style={{fontSize:11,fontWeight:"bold",color:d.color,letterSpacing:2,marginBottom:10}}>{d.label}</div>
               {[["LABEL","label"],["LINE 1","line1"],["LINE 2","line2"]].map(([l,f])=>(
-                <div key={f} style={{marginBottom:8}}>
-                  <label style={lbl}>{l}</label>
-                  <input style={inp} value={d[f]}
-                    onChange={e=>{const dd=JSON.parse(JSON.stringify(draft));dd.difficulties[k][f]=e.target.value;setDraft(dd);setSaved(false);}}/>
+                <div key={f} style={{marginBottom:8}}><label style={lbl}>{l}</label>
+                  <input style={inp} value={d[f]} onChange={e=>{const dd=JSON.parse(JSON.stringify(draft));dd.difficulties[k][f]=e.target.value;setDraft(dd);setSaved(false);}}/>
                 </div>
               ))}
             </div>
           ))}
         </div>}
-
         {tab==="text"&&<div>
-          <div style={{fontSize:9,color:"#888",marginBottom:12}}>Use {"{pct}"} for the percentage.</div>
+          <div style={{fontSize:9,color:T.textDim,marginBottom:12}}>Use {"{pct}"} for the percentage.</div>
           {Object.entries(draft.victoryText).map(([k,vt])=>(
-            <div key={k} style={{marginBottom:14,padding:10,borderRadius:8,background:"#0d0d1a",border:"1px solid #1a1a2e"}}>
+            <div key={k} style={{marginBottom:14,padding:10,borderRadius:8,background:T.cardBg,border:`1px solid ${T.border}`}}>
               <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
                 <span style={{fontSize:18}}>{vt.icon}</span>
-                <span style={{fontSize:8,color:"#777",letterSpacing:2,flex:1}}>{k.toUpperCase()}</span>
-                <input value={vt.icon}
-                  onChange={e=>{const dd=JSON.parse(JSON.stringify(draft));dd.victoryText[k].icon=e.target.value;setDraft(dd);setSaved(false);}}
+                <span style={{fontSize:8,color:T.textDim,letterSpacing:2,flex:1}}>{k.toUpperCase()}</span>
+                <input value={vt.icon} onChange={e=>{const dd=JSON.parse(JSON.stringify(draft));dd.victoryText[k].icon=e.target.value;setDraft(dd);setSaved(false);}}
                   style={{...inp,width:50,textAlign:"center",fontSize:16,padding:"2px 4px"}}/>
               </div>
               {[["TITLE","title"],["SUBTITLE","sub"]].map(([l,f])=>(
-                <div key={f} style={{marginBottom:6}}>
-                  <label style={lbl}>{l}</label>
-                  <input style={inp} value={vt[f]}
-                    onChange={e=>{const dd=JSON.parse(JSON.stringify(draft));dd.victoryText[k][f]=e.target.value;setDraft(dd);setSaved(false);}}/>
+                <div key={f} style={{marginBottom:6}}><label style={lbl}>{l}</label>
+                  <input style={inp} value={vt[f]} onChange={e=>{const dd=JSON.parse(JSON.stringify(draft));dd.victoryText[k][f]=e.target.value;setDraft(dd);setSaved(false);}}/>
                 </div>
               ))}
             </div>
+          ))}
+        </div>}
+        {tab==="theme"&&<div>
+          <div style={{fontSize:9,color:T.textDim,marginBottom:16,lineHeight:1.8}}>Choose a visual theme for the game.</div>
+          {Object.entries(THEMES).map(([key,th])=>(
+            <button key={key} onClick={()=>{const d=JSON.parse(JSON.stringify(draft));d.theme=key;setDraft(d);setSaved(false);}}
+              style={{width:"100%",padding:"16px",borderRadius:10,cursor:"pointer",marginBottom:10,textAlign:"left",
+                border:`2px solid ${draft.theme===key?th.accentColor:T.border}`,
+                background:draft.theme===key?hexToRgba(th.accentColor,0.15):T.cardBg,
+                fontFamily:T.font,transition:"all 0.2s"}}>
+              <div style={{fontSize:13,fontWeight:"bold",color:draft.theme===key?th.accentColor:T.text,marginBottom:4,letterSpacing:2}}>
+                {draft.theme===key?"✓ ":""}{th.name.toUpperCase()}
+              </div>
+              <div style={{display:"flex",gap:4,marginTop:6}}>
+                {[th.bg,th.cardBg,th.border,th.accentColor,"#FF4757","#2ED573"].map((c,i)=>(
+                  <div key={i} style={{width:16,height:16,borderRadius:3,background:c,border:"1px solid rgba(255,255,255,0.1)"}}/>
+                ))}
+              </div>
+            </button>
           ))}
         </div>}
       </div>
@@ -679,38 +765,14 @@ function EditorScreen({config,onSave,onClose}){
 /* ════════════════════════════════════════════════════════
    MAIN COMPONENT
 ════════════════════════════════════════════════════════ */
-// Returns player index if they mathematically cannot be beaten, else -1
-// A player has assured victory when their score > opponent's score + remaining cells
-function checkMathematicalVictory(ownership, numPlayers, teamMode, BS){
-  const TOTAL=BS*BS;
-  const scores=Array(numPlayers).fill(0);
-  let remaining=0;
-  for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
-    const v=ownership[r][c];
-    if(v>=0) scores[v]++; else remaining++;
-  }
-  if(teamMode){
-    // Team 0: players 0,2 — Team 1: players 1,3
-    const t0=scores[0]+(scores[2]||0);
-    const t1=scores[1]+(scores[3]||0);
-    if(t0 > t1+remaining) return 0; // team 0 wins
-    if(t1 > t0+remaining) return 1; // team 1 wins
-    return -1;
-  }
-  for(let i=0;i<numPlayers;i++){
-    let maxOther=0;
-    for(let j=0;j<numPlayers;j++) if(j!==i) maxOther=Math.max(maxOther,scores[j]);
-    if(scores[i] > maxOther+remaining) return i;
-  }
-  return -1;
-}
-
 export default function PixelGo(){
   const[config,setConfig]              =useState(loadConfig);
   const[phase,setPhase]                =useState("numSelect");
   const[editing,setEditing]            =useState(false);
+  const[showStats,setShowStats]        =useState(false);
   const[numPlayers,setNumPlayers]      =useState(2);
   const[vsComputer,setVsComputer]      =useState(false);
+  const[teamMode,setTeamMode]          =useState(false);
   const[aiLevel,setAiLevel]            =useState(null);
   const[difficulty,setDifficulty]      =useState(null);
   const[gridSize,setGridSize]          =useState(null);
@@ -718,6 +780,12 @@ export default function PixelGo(){
   const[setupIdx,setSetupIdx]          =useState(0);
   const[pendingColor,setPendingColor]  =useState(null);
   const[sharedBoard,setSharedBoard]    =useState(null);
+  const[isDailyChallenge,setIsDaily]   =useState(false);
+  // Game options
+  const[timedTurnSecs,setTimedTurnSecs]=useState(0); // 0=off
+  const[autoPass,setAutoPass]          =useState(true);
+  const[funMode,setFunMode]            =useState(false);
+  // Game state
   const[board,setBoard]                =useState(null);
   const[ownership,setOwnership]        =useState(null);
   const[prevOwnership,setPrevOwnership]=useState(null);
@@ -727,6 +795,7 @@ export default function PixelGo(){
   const[captureCount,setCaptureCount]  =useState(0);
   const[hovered,setHovered]            =useState(null);
   const[flash,setFlash]                =useState(null);
+  const[rippleOrigin,setRippleOrigin]  =useState(null);  // {r,c} for ripple animation
   const[enclosedFlash,setEnclosedFlash]=useState(null);
   const[autoFlash,setAutoFlash]        =useState(null);
   const[legendFocus,setLegendFocus]    =useState(null);
@@ -735,43 +804,45 @@ export default function PixelGo(){
   const[confirmEnd,setConfirmEnd]      =useState(false);
   const[finalOwnership,setFinalOwnership]=useState(null);
   const[reviewing,setReviewing]        =useState(false);
-  const[teamMode,setTeamMode]          =useState(false);  // 2v2 for 4-player games
   const[aiThinking,setAiThinking]      =useState(false);
   const[showInstructions,setShowInstructions]=useState(false);
+  const[timeLeft,setTimeLeft]          =useState(null);
+  const[comboCount,setComboCount]      =useState(0);   // enclosures this turn
+  const[comboStreak,setComboStreak]    =useState(0);   // consecutive turns with enclosure
+  const[showCombo,setShowCombo]        =useState(false);
+  const[autoPassActive,setAutoPassActive]=useState(false);
 
   const music=useMusicSystem();
 
-  // Refs so setTimeout callbacks always read CURRENT state, not stale closures
-  const ownershipRef    = useRef(null);
-  const prevOwnershipRef= useRef(null);
-  const captureCountRef = useRef(0);
-  const cpRef           = useRef(0);
-  const roundRef        = useRef(1);
-  const boardRef        = useRef(null);
-  const phaseRef        = useRef("numSelect");
-  const playerDefsRef   = useRef([]);
-  const numPlayersRef   = useRef(2);
-  const diffRef         = useRef(null);
-  const victoryAssuredRef=useRef(null);
+  // Refs for AI stale closure prevention
+  const ownershipRef=useRef(null),prevOwnershipRef=useRef(null);
+  const captureCountRef=useRef(0),cpRef=useRef(0),roundRef=useRef(1);
+  const boardRef=useRef(null),phaseRef=useRef("numSelect");
+  const playerDefsRef=useRef([]),numPlayersRef=useRef(2);
+  const diffRef=useRef(null),victoryAssuredRef=useRef(null);
+  const timerRef=useRef(null);
 
-  const PALETTE   =config.boardColours;
-  const diff      =difficulty?config.difficulties[difficulty]:null;
-  const BS        =gridSize?config.gridSizes[gridSize].bs:22;
-  const MAX_ROUNDS=config.maxRounds;  // 0 = unlimited
-  const UNLIMITED = MAX_ROUNDS === 0;
+  const T=THEMES[config.theme||"neon"];
+  const PALETTE=config.boardColours;
+  const diff=difficulty?config.difficulties[difficulty]:null;
+  const BS=gridSize?config.gridSizes[gridSize].bs:22;
+  const MAX_ROUNDS=config.maxRounds;
+  const UNLIMITED=MAX_ROUNDS===0;
+  const FOG_RANGE=difficulty==="veryhard"?3:4;
+  const USE_FOG=difficulty==="hard"||difficulty==="veryhard";
 
-  // Keep refs in sync so AI setTimeout callbacks always read current state
-  useEffect(()=>{ ownershipRef.current    =ownership;     },[ownership]);
-  useEffect(()=>{ prevOwnershipRef.current=prevOwnership; },[prevOwnership]);
-  useEffect(()=>{ captureCountRef.current =captureCount;  },[captureCount]);
-  useEffect(()=>{ cpRef.current           =cp;            },[cp]);
-  useEffect(()=>{ roundRef.current        =round;         },[round]);
-  useEffect(()=>{ boardRef.current        =board;         },[board]);
-  useEffect(()=>{ phaseRef.current        =phase;         },[phase]);
-  useEffect(()=>{ playerDefsRef.current   =playerDefs;    },[playerDefs]);
-  useEffect(()=>{ numPlayersRef.current   =numPlayers;    },[numPlayers]);
-  useEffect(()=>{ diffRef.current         =diff;          },[diff]);
-  useEffect(()=>{ victoryAssuredRef.current=victoryAssured;},[victoryAssured]);
+  // Ref sync
+  useEffect(()=>{ownershipRef.current=ownership;},[ownership]);
+  useEffect(()=>{prevOwnershipRef.current=prevOwnership;},[prevOwnership]);
+  useEffect(()=>{captureCountRef.current=captureCount;},[captureCount]);
+  useEffect(()=>{cpRef.current=cp;},[cp]);
+  useEffect(()=>{roundRef.current=round;},[round]);
+  useEffect(()=>{boardRef.current=board;},[board]);
+  useEffect(()=>{phaseRef.current=phase;},[phase]);
+  useEffect(()=>{playerDefsRef.current=playerDefs;},[playerDefs]);
+  useEffect(()=>{numPlayersRef.current=numPlayers;},[numPlayers]);
+  useEffect(()=>{diffRef.current=diff;},[diff]);
+  useEffect(()=>{victoryAssuredRef.current=victoryAssured;},[victoryAssured]);
 
   const takenColors=playerDefs.map(p=>p.hex);
   const takenCells=new Set(playerDefs.map(p=>p.row*BS+p.col));
@@ -782,18 +853,24 @@ export default function PixelGo(){
     for(let r=0;r<BS;r++) for(let col=0;col<BS;col++){const v=ownership[r][col];if(v>=0) c[v]++;}
     return c;
   },[ownership,BS]);
-  // Team scores: team 0 = players 0+2, team 1 = players 1+3
   const teamScores=useMemo(()=>teamMode?[scores[0]+(scores[2]||0),scores[1]+(scores[3]||0)]:[0,0],[scores,teamMode]);
 
   const TOTAL=BS*BS;
   const claimed=scores.slice(0,numPlayers).reduce((a,b)=>a+b,0);
 
+  // Fog of war visibility
+  const visibleCells=useMemo(()=>{
+    if(!USE_FOG||!ownership||phase!=="playing") return null;
+    // Human player index (always 0 when vs computer, varies in multiplayer)
+    const humanIdx=playerDefs.findIndex(d=>!d.isAI);
+    if(humanIdx<0) return null;
+    return computeFogVisibility(ownership,humanIdx,BS,FOG_RANGE);
+  },[ownership,phase,BS,USE_FOG,FOG_RANGE,playerDefs]);
+
   const clickableCells=useMemo(()=>{
     if(phase!=="playing"||!board||!playerDefs.length) return new Set();
-    // Use prevOwnership only when human has already captured this turn AND prevOwnership exists
-    // Never use prevOwnership on AI turns or at the start of a turn
-    const isHumanTurn = !playerDefs[cp]?.isAI;
-    const base = (isHumanTurn && captureCount>0 && prevOwnership) ? prevOwnership : ownership;
+    const isHumanTurn=!playerDefs[cp]?.isAI;
+    const base=(isHumanTurn&&captureCount>0&&prevOwnership)?prevOwnership:ownership;
     if(!base) return new Set();
     return getClickableCellsForPlayer(board,base,cp,playerDefs,PALETTE,BS);
   },[phase,ownership,prevOwnership,captureCount,cp,board,playerDefs,BS,PALETTE]);
@@ -802,16 +879,13 @@ export default function PixelGo(){
     if(!hovered||!board||!ownership||phase!=="playing"||!diff) return new Set();
     const[r,c]=hovered;
     if(!clickableCells.has(r*BS+c)) return new Set();
-    const isHumanTurn = !playerDefs[cp]?.isAI;
-    const base = (isHumanTurn && captureCount>0 && prevOwnership) ? prevOwnership : ownership;
+    const isHumanTurn=!playerDefs[cp]?.isAI;
+    const base=(isHumanTurn&&captureCount>0&&prevOwnership)?prevOwnership:ownership;
     return previewCapture(board,base,cp,r,c,diff.cascade,BS);
   },[hovered,board,ownership,prevOwnership,captureCount,clickableCells,cp,phase,diff,BS,playerDefs]);
 
   const topPlayer=useMemo(()=>{
-    if(teamMode){
-      // Return index 0 or 1 for winning team
-      return teamScores[0]>=teamScores[1]?0:1;
-    }
+    if(teamMode){return teamScores[0]>=teamScores[1]?0:1;}
     let max=-1,top=0;
     for(let i=0;i<numPlayers;i++) if(scores[i]>max){max=scores[i];top=i;}
     return top;
@@ -824,7 +898,31 @@ export default function PixelGo(){
   },[hovered,board,ownership,PALETTE]);
   const hoverIsClickable=hovered&&clickableCells.has(hovered[0]*BS+hovered[1]);
 
-  /* ── AI auto-play ── reads from refs so never stale ── */
+  // Timed turns
+  useEffect(()=>{
+    if(phase!=="playing"||!timedTurnSecs||playerDefs[cp]?.isAI) return;
+    setTimeLeft(timedTurnSecs);
+    timerRef.current=setInterval(()=>{
+      setTimeLeft(t=>{
+        if(t<=1){clearInterval(timerRef.current);music.sfxEndTurn();doEndTurn();return null;}
+        if(t<=6) music.sfxTimer();
+        return t-1;
+      });
+    },1000);
+    return()=>{clearInterval(timerRef.current);setTimeLeft(null);};
+  },[cp,phase,timedTurnSecs]);
+
+  // Auto-pass
+  useEffect(()=>{
+    if(phase!=="playing"||!autoPass||playerDefs[cp]?.isAI) return;
+    if(clickableCells.size===0&&captureCount===0){
+      setAutoPassActive(true);
+      const t=setTimeout(()=>{setAutoPassActive(false);doEndTurn();},1800);
+      return()=>{clearTimeout(t);setAutoPassActive(false);};
+    }
+  },[clickableCells.size,cp,phase,autoPass,captureCount]);
+
+  // AI auto-play
   useEffect(()=>{
     if(phase!=="playing") return;
     const cur=playerDefs[cp];
@@ -832,24 +930,18 @@ export default function PixelGo(){
     setAiThinking(true);
     const timer=setTimeout(()=>{
       setAiThinking(false);
-      // Read ALL state from refs so we get current values even inside setTimeout
-      const curOwnership  = ownershipRef.current;
-      const curBoard      = boardRef.current;
-      const curCp         = cpRef.current;
-      const curDefs       = playerDefsRef.current;
-      const curNumPlayers = numPlayersRef.current;
-      const curDiff       = diffRef.current;
-      if(!curOwnership||!curBoard||!curDiff) return;
-      const move=getAIMove(curBoard,curOwnership,curCp,curDefs,PALETTE,BS,curDiff.cascade,cur.aiLevel,curNumPlayers);
-      doAITurn(move, curBoard, curOwnership, curCp, curDefs, curNumPlayers, curDiff);
+      const curO=ownershipRef.current,curB=boardRef.current;
+      const curCp=cpRef.current,curDefs=playerDefsRef.current;
+      const curNP=numPlayersRef.current,curDiff=diffRef.current;
+      if(!curO||!curB||!curDiff) return;
+      const move=getAIMove(curB,curO,curCp,curDefs,PALETTE,BS,curDiff.cascade,cur.aiLevel,curNP);
+      doAITurn(move,curB,curO,curCp,curDefs,curNP,curDiff);
     },900+Math.random()*400);
     return()=>clearTimeout(timer);
-  },[cp,phase]); // deliberately exclude ownership — only retrigger on new turn
+  },[cp,phase]);
 
-  /* ── AI turn: self-contained, ref-free, takes everything as arguments ── */
-  function doAITurn(move, curBoard, curOwnership, curCp, curDefs, curNumPlayers, curDiff){
-    // Step 1: capture
-    let afterOwnership = curOwnership;
+  function doAITurn(move,curBoard,curOwnership,curCp,curDefs,curNumPlayers,curDiff){
+    let afterOwnership=curOwnership;
     if(move){
       const[r,c]=move;
       const doCapture=curDiff.cascade==="full"?cascadeCapture:captureGroup;
@@ -857,10 +949,9 @@ export default function PixelGo(){
       const{newOwnership:afterEnc,enclosed}=applyEnclosures(curBoard,after,curDefs,curNumPlayers,PALETTE,BS);
       afterOwnership=afterEnc;
       setOwnership(afterEnc);
-      setFlash(captured); music.sfxCapture();
-      if(enclosed.size>0){ setEnclosedFlash(enclosed); setTimeout(()=>setEnclosedFlash(null),1000); }
-      setTimeout(()=>setFlash(null),600);
-      // Check victory assured
+      setFlash(captured);setRippleOrigin({r,c});music.sfxCapture();
+      if(enclosed.size>0){setEnclosedFlash(enclosed);setTimeout(()=>setEnclosedFlash(null),1000);}
+      setTimeout(()=>{setFlash(null);setRippleOrigin(null);},700);
       const ts=Array(4).fill(0);
       afterEnc.forEach(row=>row.forEach(v=>{if(v>=0) ts[v]++;}));
       const TOTAL_C=BS*BS;
@@ -870,91 +961,138 @@ export default function PixelGo(){
         }
       }
       if(afterEnc.flat().every(v=>v>=0)){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
-      if(UNLIMITED){
-        const mathWinner=checkMathematicalVictory(afterEnc,curNumPlayers,teamMode,BS);
-        if(mathWinner>=0){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
-      }
+      if(UNLIMITED){const mw=checkMathematicalVictory(afterEnc,curNumPlayers,teamMode,BS);if(mw>=0){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}}
     }
-
-    // Step 2: end turn (delayed so capture animation plays first)
     setTimeout(()=>{
       music.sfxEndTurn();
-      const curRound=roundRef.current;
-      const next=(curCp+1)%curNumPlayers;
+      const curRound=roundRef.current,next=(curCp+1)%curNumPlayers;
       let newRound=curRound;
-      if(next===0){
-        newRound++;
-        if(!UNLIMITED&&newRound>MAX_ROUNDS){setFinalOwnership(afterOwnership);music.sfxVictory();setPhase("gameover");return;}
-        setRound(newRound);
-      }
+      if(next===0){newRound++;if(!UNLIMITED&&newRound>MAX_ROUNDS){setFinalOwnership(afterOwnership);music.sfxVictory();setPhase("gameover");return;}setRound(newRound);}
       const{newOwnership:o2,autoClaimed}=autoClaimAdjacent(curBoard,afterOwnership,next,curDefs,PALETTE,BS);
-      if(autoClaimed.size>0){
-        setOwnership(o2);setAutoFlash(autoClaimed);music.sfxAutoGrab();
-        setTimeout(()=>setAutoFlash(null),800);
-        if(o2.flat().every(v=>v>=0)){setFinalOwnership(o2);music.sfxVictory();setPhase("gameover");return;}
-      }
-      // Reset ALL turn state atomically before switching player
-      // captureCount MUST be 0 before setCp so human's clickableCells uses fresh ownership
-      setCaptureCount(0);
-      setPrevOwnership(null);
-      setHovered(null);
-      setLegendFocus(null);
-      setConfirmEnd(false);
-      setAiThinking(false);
-      setTurnNum(n=>n+1);
-      setCp(next);  // this goes last — triggers human's turn
+      if(autoClaimed.size>0){setOwnership(o2);setAutoFlash(autoClaimed);music.sfxAutoGrab();setTimeout(()=>setAutoFlash(null),800);
+        if(o2.flat().every(v=>v>=0)){setFinalOwnership(o2);music.sfxVictory();setPhase("gameover");return;}}
+      setCaptureCount(0);setPrevOwnership(null);setHovered(null);setLegendFocus(null);
+      setConfirmEnd(false);setAiThinking(false);setTimeLeft(null);
+      setComboCount(0);setTurnNum(n=>n+1);setCp(next);
     },500);
   }
 
-  /* ── Core capture (human clicks only) ── */
+  // Human capture
   function executeCapture(r,c){
-    // For undo: save current ownership before first capture, then use prevOwnership as base for re-clicks
-    const base = (captureCount>0 && prevOwnership) ? prevOwnership : ownership;
+    clearInterval(timerRef.current);setTimeLeft(null);
+    const base=(captureCount>0&&prevOwnership)?prevOwnership:ownership;
     if(captureCount===0) setPrevOwnership(ownership.map(row=>[...row]));
     const doCapture=diff.cascade==="full"?cascadeCapture:captureGroup;
     const{newOwnership:after,captured}=doCapture(board,base,cp,r,c,BS);
     const{newOwnership:afterEnc,enclosed}=applyEnclosures(board,after,playerDefs,numPlayers,PALETTE,BS);
     setOwnership(afterEnc);setCaptureCount(1);
-    setFlash(captured);music.sfxCapture();
-    if(enclosed.size>0){setEnclosedFlash(enclosed);}
-    setTimeout(()=>setFlash(null),600);
-    setTimeout(()=>setEnclosedFlash(null),1000);
+    setFlash(captured);setRippleOrigin({r,c});music.sfxCapture();
+    const newCombo=enclosed.size>0?comboCount+1:0;
+    setComboCount(newCombo);
+    if(enclosed.size>0){
+      setEnclosedFlash(enclosed);
+      setTimeout(()=>setEnclosedFlash(null),1000);
+      if(funMode&&newCombo>=2){
+        const newStreak=comboStreak+1;setComboStreak(newStreak);
+        setShowCombo(true);setTimeout(()=>setShowCombo(false),1800);
+        music.sfxCombo();
+      }
+    }
+    setTimeout(()=>{setFlash(null);setRippleOrigin(null);},700);
     if(!victoryAssured){
       const ts=Array(4).fill(0);
       afterEnc.forEach(row=>row.forEach(v=>{if(v>=0) ts[v]++;}));
       for(let i=0;i<numPlayers;i++) if(ts[i]>TOTAL/2){setVictoryAssured({playerIdx:i,name:playerDefs[i].name,hex:playerDefs[i].hex});break;}
     }
-    if(afterEnc.flat().every(v=>v>=0)){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
-    // In unlimited mode, end when someone mathematically cannot lose
-    if(UNLIMITED){
-      const mathWinner=checkMathematicalVictory(afterEnc,numPlayers,teamMode,BS);
-      if(mathWinner>=0){setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");return;}
+    if(afterEnc.flat().every(v=>v>=0)){
+      updateStatsOnGameEnd(afterEnc,captured.size);
+      setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");
     }
+    if(UNLIMITED){const mw=checkMathematicalVictory(afterEnc,numPlayers,teamMode,BS);if(mw>=0){updateStatsOnGameEnd(afterEnc,captured.size);setFinalOwnership(afterEnc);music.sfxVictory();setPhase("gameover");}}
   }
 
   function doEndTurn(){
     if(phase!=="playing") return;
-    music.sfxEndTurn();
-    setConfirmEnd(false);
-    const next=(cp+1)%numPlayers;
-    let newRound=round;
-    if(next===0){newRound++;if(!UNLIMITED&&newRound>MAX_ROUNDS){setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");return;}setRound(newRound);}
+    clearInterval(timerRef.current);setTimeLeft(null);
+    music.sfxEndTurn();setConfirmEnd(false);
+    // Update combo streak
+    if(funMode){if(comboCount===0) setComboStreak(0);}
+    setComboCount(0);
+    const next=(cp+1)%numPlayers;let newRound=round;
+    if(next===0){newRound++;if(!UNLIMITED&&newRound>MAX_ROUNDS){updateStatsOnGameEnd(ownership,0);setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");return;}setRound(newRound);}
     const{newOwnership:o2,autoClaimed}=autoClaimAdjacent(board,ownership,next,playerDefs,PALETTE,BS);
     if(autoClaimed.size>0){setOwnership(o2);setAutoFlash(autoClaimed);music.sfxAutoGrab();setTimeout(()=>setAutoFlash(null),800);
-      if(o2.flat().every(v=>v>=0)){setFinalOwnership(o2);music.sfxVictory();setPhase("gameover");return;}}
+      if(o2.flat().every(v=>v>=0)){updateStatsOnGameEnd(o2,0);setFinalOwnership(o2);music.sfxVictory();setPhase("gameover");return;}}
     setCp(next);setTurnNum(n=>n+1);setCaptureCount(0);setPrevOwnership(null);setHovered(null);setLegendFocus(null);
   }
 
+  function updateStatsOnGameEnd(finalO,lastCapSize){
+    try{
+      const st=loadStats();
+      const fs=Array(numPlayers).fill(0);
+      for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){const v=finalO[r][c];if(v>=0) fs[v]++;}
+      const humanIdx=playerDefs.findIndex(d=>!d.isAI);
+      const isWin=humanIdx>=0&&fs[humanIdx]===Math.max(...fs.slice(0,numPlayers));
+      st.gamesPlayed++;
+      if(isWin) st.wins++;else st.losses++;
+      st.totalCaptures=(st.totalCaptures||0)+fs[humanIdx>=0?humanIdx:0];
+      st.biggestSingleCapture=Math.max(st.biggestSingleCapture||0,lastCapSize);
+      st.encloseCount=(st.encloseCount||0)+comboCount;
+      if(vsComputer&&aiLevel&&humanIdx>=0){
+        if(!st.vsComputer) st.vsComputer={recruit:{wins:0,losses:0},veteran:{wins:0,losses:0},master:{wins:0,losses:0}};
+        if(isWin) st.vsComputer[aiLevel].wins++;else st.vsComputer[aiLevel].losses++;
+      }
+      if(isDailyChallenge){
+        const today=getTodayStr();
+        if(!st.daily) st.daily={streak:0,lastDate:null,bestScore:0,completions:0};
+        st.daily.completions++;
+        st.daily.bestScore=Math.max(st.daily.bestScore,fs[humanIdx>=0?humanIdx:0]);
+        if(st.daily.lastDate===getTodayStr()){/* already counted */}
+        else{
+          const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+          const yStr=`${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,"0")}${String(yesterday.getDate()).padStart(2,"0")}`;
+          st.daily.streak=(st.daily.lastDate===yStr)?(st.daily.streak||0)+1:1;
+          st.daily.lastDate=today;
+        }
+      }
+      saveStats(st);
+    }catch{}
+  }
+
+  const triggerEndGame=useCallback(()=>{
+    if(!confirmEnd){setConfirmEnd(true);return;}
+    updateStatsOnGameEnd(ownership,0);setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");
+  },[confirmEnd,ownership]);
+
   /* ── Setup ── */
-  const goToDifficulty=useCallback((n,vc=false)=>{setNumPlayers(vc?2:n);setVsComputer(vc);if(vc)setPhase("aiLevel");else setPhase("difficulty");},[]);
-  const goToGridSize  =useCallback((d)=>{setDifficulty(d);setPhase("gridSize");},[]);
-  const goToColorPick =useCallback((gs)=>{
-    setGridSize(gs);
-    const bs=config.gridSizes[gs].bs,d=difficulty;
+  const goToDifficulty=useCallback((n,vc=false,tm=false)=>{
+    setNumPlayers(vc?2:n);setVsComputer(vc);setTeamMode(tm);
+    if(vc) setPhase("aiLevel");else setPhase("difficulty");
+  },[]);
+  const goToGridSize=useCallback((d)=>{setDifficulty(d);setPhase("gridSize");},[]);
+  const goToOptions=useCallback((gs)=>{setGridSize(gs);setPhase("options");},[]);
+  const goToColorPick=useCallback(()=>{
+    const bs=config.gridSizes[gridSize].bs,d=difficulty;
     setPlayerDefs([]);setSetupIdx(0);setPendingColor(null);
-    setSharedBoard(config.difficulties[d].board==="grouped"?mkBoardGrouped(bs):mkBoardRandom(bs));
+    const rand=isDailyChallenge?seededRand(dateSeed()):undefined;
+    setSharedBoard(config.difficulties[d].board==="grouped"?mkBoardGrouped(bs,rand):mkBoardRandom(bs,rand));
     setPhase("playerSetup");
-  },[difficulty,config]);
+  },[difficulty,gridSize,config,isDailyChallenge]);
+
+  const startDailyChallenge=useCallback(()=>{
+    const todayStats=loadStats();
+    if(todayStats.daily?.lastDate===getTodayStr()){
+      alert("You've already completed today's challenge! Come back tomorrow.");
+      return;
+    }
+    setIsDaily(true);setVsComputer(true);setAiLevel("master");setTeamMode(false);
+    setNumPlayers(2);setDifficulty("normal");setGridSize("medium");
+    setTimedTurnSecs(0);setAutoPass(true);setFunMode(false);
+    const bs=17,rand=seededRand(dateSeed());
+    setPlayerDefs([]);setSetupIdx(0);setPendingColor(null);
+    setSharedBoard(mkBoardGrouped(bs,rand));
+    setPhase("playerSetup");
+  },[]);
 
   const pickColor=useCallback((colorObj)=>{
     if(takenColors.includes(colorObj.hex)) return;
@@ -964,80 +1102,40 @@ export default function PixelGo(){
   const pickPosition=useCallback((r,c)=>{
     if(!pendingColor||takenCells.has(r*BS+c)) return;
     let newDefs=[...playerDefs,{...pendingColor,row:r,col:c,isAI:false}];
-
-    // If vs computer, auto-assign AI player after human picks
     if(vsComputer&&newDefs.length===1){
-      // ── 1. Pick a RANDOM colour the human hasn't chosen ──
       const usedHexes=newDefs.map(d=>d.hex);
       const available=config.teams.filter(t=>!usedHexes.includes(t.hex));
       const aiTeam=available[Math.floor(Math.random()*available.length)]||config.teams[1];
-
-      // ── 2. Pick start position based on AI level ──
-      let bestPos=[0,BS-1]; // fallback
-
+      let bestPos=[0,BS-1];
       if(aiLevel==="recruit"){
-        // Recruit: just pick the corner furthest from human
         const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];
         let bestDist=-1;
-        for(const[cr,cc]of corners){
-          if(cr===r&&cc===c) continue;
-          const d=Math.abs(cr-r)+Math.abs(cc-c);
-          if(d>bestDist){bestDist=d;bestPos=[cr,cc];}
-        }
+        for(const[cr,cc]of corners){if(cr===r&&cc===c) continue;const d=Math.abs(cr-r)+Math.abs(cc-c);if(d>bestDist){bestDist=d;bestPos=[cr,cc];}}
       } else {
-        // Veteran / Master: find the cell in the largest connected group
-        // of the AI's assigned board colour, then start there
         const aiColorIdx=PALETTE.findIndex(bc=>bc.hex===aiTeam.hex);
-
-        // Flood-fill all groups of that colour and find the biggest
         const visited=Array.from({length:BS},()=>Array(BS).fill(false));
-        let biggestGroup=[], biggestSize=0;
-
-        // Scratch ownership (all unclaimed) for the flood fill
-        const scratch=Array.from({length:BS},()=>Array(BS).fill(-1));
-
+        let biggestGroup=[],biggestSize=0;
         for(let gr=0;gr<BS;gr++) for(let gc=0;gc<BS;gc++){
           if(visited[gr][gc]||sharedBoard[gr][gc]!==aiColorIdx) continue;
-          // BFS this group
-          const group=[];
-          const q=[[gr,gc]];
-          visited[gr][gc]=true;
+          const group=[],q=[[gr,gc]];visited[gr][gc]=true;
           while(q.length){
-            const[qr,qc]=q.shift();
-            group.push([qr,qc]);
+            const[qr,qc]=q.shift();group.push([qr,qc]);
             for(const[nr,nc]of[[qr-1,qc],[qr+1,qc],[qr,qc-1],[qr,qc+1]]){
-              if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!visited[nr][nc]&&sharedBoard[nr][nc]===aiColorIdx){
-                visited[nr][nc]=true;
-                q.push([nr,nc]);
-              }
+              if(nr>=0&&nr<BS&&nc>=0&&nc<BS&&!visited[nr][nc]&&sharedBoard[nr][nc]===aiColorIdx){visited[nr][nc]=true;q.push([nr,nc]);}
             }
           }
           if(group.length>biggestSize){biggestSize=group.length;biggestGroup=group;}
         }
-
         if(biggestGroup.length>0){
-          // Pick the cell in the biggest group that is furthest from the human's start
           let bestDist=-1;
-          for(const[gr,gc]of biggestGroup){
-            if(gr===r&&gc===c) continue; // don't land on human
-            const d=Math.abs(gr-r)+Math.abs(gc-c);
-            if(d>bestDist){bestDist=d;bestPos=[gr,gc];}
-          }
+          for(const[gr,gc]of biggestGroup){if(gr===r&&gc===c) continue;const d=Math.abs(gr-r)+Math.abs(gc-c);if(d>bestDist){bestDist=d;bestPos=[gr,gc];}}
         } else {
-          // Fallback: furthest corner
-          const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];
-          let bestDist=-1;
-          for(const[cr,cc]of corners){
-            if(cr===r&&cc===c) continue;
-            const d=Math.abs(cr-r)+Math.abs(cc-c);
-            if(d>bestDist){bestDist=d;bestPos=[cr,cc];}
-          }
+          const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];let bestDist=-1;
+          for(const[cr,cc]of corners){if(cr===r&&cc===c) continue;const d=Math.abs(cr-r)+Math.abs(cc-c);if(d>bestDist){bestDist=d;bestPos=[cr,cc];}}
         }
       }
-
       newDefs=[...newDefs,{...aiTeam,row:bestPos[0],col:bestPos[1],isAI:true,aiLevel}];
     }
-
     setPlayerDefs(newDefs);setPendingColor(null);
     if(newDefs.length===numPlayers||(vsComputer&&newDefs.length===2)){
       const realNum=newDefs.length;
@@ -1045,98 +1143,107 @@ export default function PixelGo(){
       newDefs.forEach((def,i)=>{o[def.row][def.col]=i;});
       const{newOwnership:o2}=autoClaimAdjacent(sharedBoard,o,0,newDefs,PALETTE,BS);
       setBoard(sharedBoard);setOwnership(o2);setPrevOwnership(null);
-      setCp(0);setRound(1);setTurnNum(1);setCaptureCount(0);
-      setHovered(null);setFlash(null);setEnclosedFlash(null);setAutoFlash(null);
+      setCp(0);setRound(1);setTurnNum(1);setCaptureCount(0);setHovered(null);
+      setFlash(null);setRippleOrigin(null);setEnclosedFlash(null);setAutoFlash(null);
       setLegendFocus(null);setConfirmEnd(false);setFinalOwnership(null);
       setReviewing(false);setVictoryAssured(null);setShowScores(false);
-      setNumPlayers(realNum);
-      setPhase("playing");
+      setComboCount(0);setComboStreak(0);setShowCombo(false);setAutoPassActive(false);
+      setNumPlayers(realNum);setPhase("playing");
     } else setSetupIdx(newDefs.length);
   },[pendingColor,playerDefs,numPlayers,vsComputer,sharedBoard,takenCells,BS,PALETTE,config.teams,aiLevel]);
 
   const handleBoardClick=useCallback((r,c)=>{
     if(phase==="playerSetup"){pickPosition(r,c);return;}
     if(phase!=="playing"||aiThinking) return;
-    if(playerDefs[cp]?.isAI) return; // don't allow click during AI turn
+    if(playerDefs[cp]?.isAI) return;
     if(!clickableCells.has(r*BS+c)) return;
-    setConfirmEnd(false);
+    setConfirmEnd(false);setAutoPassActive(false);
     executeCapture(r,c);
-  },[phase,clickableCells,board,ownership,prevOwnership,captureCount,cp,diff,BS,playerDefs,numPlayers,PALETTE,victoryAssured,TOTAL,pickPosition,aiThinking]);
+  },[phase,clickableCells,aiThinking,playerDefs,cp,BS]);
 
   const endTurn=useCallback(()=>{
     if(phase!=="playing"||playerDefs[cp]?.isAI) return;
     doEndTurn();
-  },[phase,cp,playerDefs,round,board,ownership,numPlayers,MAX_ROUNDS]);
-
-  const triggerEndGame=useCallback(()=>{
-    if(!confirmEnd){setConfirmEnd(true);return;}
-    setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");
-  },[confirmEnd,ownership]);
+  },[phase,cp,playerDefs,round,ownership]);
 
   const resetToMenu=()=>{
+    clearInterval(timerRef.current);
     setPhase("numSelect");setPlayerDefs([]);setSetupIdx(0);
     setPendingColor(null);setSharedBoard(null);setBoard(null);setOwnership(null);
     setPrevOwnership(null);setDifficulty(null);setGridSize(null);setCaptureCount(0);
-    setLegendFocus(null);setFlash(null);setEnclosedFlash(null);setAutoFlash(null);
+    setLegendFocus(null);setFlash(null);setRippleOrigin(null);setEnclosedFlash(null);setAutoFlash(null);
     setConfirmEnd(false);setFinalOwnership(null);setReviewing(false);
     setTurnNum(1);setVictoryAssured(null);setShowScores(false);
-    setVsComputer(false);setAiLevel(null);setAiThinking(false);setShowInstructions(false);setTeamMode(false);
+    setVsComputer(false);setAiLevel(null);setAiThinking(false);setTeamMode(false);
+    setIsDaily(false);setTimeLeft(null);setComboCount(0);setComboStreak(0);
+    setShowCombo(false);setAutoPassActive(false);
   };
 
-  if(editing) return<EditorScreen config={config} onSave={cfg=>{setConfig(cfg);}} onClose={()=>setEditing(false)}/>;
+  if(editing) return<EditorScreen config={config} onSave={cfg=>{setConfig(cfg);}} onClose={()=>setEditing(false)} T={T}/>;
+  if(showStats) return<StatsScreen onClose={()=>setShowStats(false)} T={T}/>;
 
   /* ════ NUM SELECT ════ */
   if(phase==="numSelect") return(
-    <Shell>
-      <Logo name={config.gameName}/>
-      <Dim>{config.tagline}</Dim>
-      <SLabel>HOW MANY PLAYERS?</SLabel>
+    <Shell T={T}>
+      <Logo name={config.gameName} T={T}/>
+      <Dim T={T}>{config.tagline}</Dim>
+      <SLabel T={T}>HOW MANY PLAYERS?</SLabel>
       <div style={{display:"flex",gap:10,marginBottom:8,flexWrap:"wrap",justifyContent:"center"}}>
-        {[1,2,4].map(n=><NumBtn key={n} onClick={()=>{setTeamMode(false);goToDifficulty(n);}}>{n}</NumBtn>)}
+        {[1,2,4].map(n=><NumBtn key={n} onClick={()=>goToDifficulty(n)} T={T}>{n}</NumBtn>)}
       </div>
-      <button onClick={()=>{setTeamMode(true);goToDifficulty(4);}} style={{
-        width:"100%",padding:"10px 16px",borderRadius:10,cursor:"pointer",marginBottom:10,
-        border:"2px solid #FFD32A",background:"rgba(255,211,42,0.08)",
-        color:"#FFD32A",fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:"bold",letterSpacing:2,
-        transition:"all 0.2s",
-      }}
-        onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,211,42,0.18)";e.currentTarget.style.boxShadow="0 0 20px rgba(255,211,42,0.35)";}}
-        onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,211,42,0.08)";e.currentTarget.style.boxShadow="none";}}>
+      <button onClick={()=>goToDifficulty(4,false,true)} style={{
+        width:"100%",padding:"10px",borderRadius:10,cursor:"pointer",marginBottom:8,
+        border:`2px solid #FFD32A`,background:"rgba(255,211,42,0.08)",
+        color:"#FFD32A",fontFamily:T.font,fontSize:10,fontWeight:"bold",letterSpacing:2,transition:"all 0.2s"}}
+        onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,211,42,0.18)";}}
+        onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,211,42,0.08)";}}>
         ⚔️ 2 VS 2 (TEAM MODE)
       </button>
-      {/* VS Computer button */}
       <button onClick={()=>goToDifficulty(2,true)} style={{
-        width:"100%",padding:"12px 16px",borderRadius:10,cursor:"pointer",marginBottom:24,
-        border:"2px solid #A29BFE",background:"rgba(162,155,254,0.08)",
-        color:"#A29BFE",fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:"bold",letterSpacing:2,
-        transition:"all 0.2s",
-      }}
-        onMouseEnter={e=>{e.currentTarget.style.background="rgba(162,155,254,0.18)";e.currentTarget.style.boxShadow="0 0 20px rgba(162,155,254,0.4)";}}
-        onMouseLeave={e=>{e.currentTarget.style.background="rgba(162,155,254,0.08)";e.currentTarget.style.boxShadow="none";}}>
+        width:"100%",padding:"10px",borderRadius:10,cursor:"pointer",marginBottom:16,
+        border:`2px solid ${T.accentColor}`,background:hexToRgba(T.accentColor,0.08),
+        color:T.accentColor,fontFamily:T.font,fontSize:10,fontWeight:"bold",letterSpacing:2,transition:"all 0.2s"}}
+        onMouseEnter={e=>{e.currentTarget.style.background=hexToRgba(T.accentColor,0.18);}}
+        onMouseLeave={e=>{e.currentTarget.style.background=hexToRgba(T.accentColor,0.08);}}>
         🤖 VS COMPUTER
       </button>
-      <div style={{color:"#888",fontSize:9,letterSpacing:1,textAlign:"center",lineHeight:2.2,marginBottom:20}}>
-        CLICK NEUTRAL CELLS TO CLAIM TERRITORY<br/>
+      {/* Daily challenge */}
+      <button onClick={startDailyChallenge} style={{
+        width:"100%",padding:"10px",borderRadius:10,cursor:"pointer",marginBottom:16,
+        border:"2px solid #FF9F43",background:"rgba(255,159,67,0.08)",
+        color:"#FF9F43",fontFamily:T.font,fontSize:10,fontWeight:"bold",letterSpacing:2,transition:"all 0.2s"}}
+        onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,159,67,0.18)";}}
+        onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,159,67,0.08)";}}>
+        ☀️ DAILY CHALLENGE
+        <div style={{fontSize:8,opacity:0.7,fontWeight:"normal",marginTop:2,letterSpacing:1}}>
+          vs Master · New board every day · {getTodayStr()}
+        </div>
+      </button>
+      <div style={{color:T.textDim,fontSize:9,letterSpacing:1,textAlign:"center",lineHeight:2.2,marginBottom:16}}>
         YOUR COLOUR AUTO-JOINS ADJACENT CELLS<br/>
-        {MAX_ROUNDS} ROUNDS · MOST CELLS WINS
+        SURROUND NEUTRALS TO CLAIM THEM<br/>
+        {UNLIMITED?"UNLIMITED ROUNDS":"MAX "+MAX_ROUNDS+" ROUNDS"} · MOST CELLS WINS
       </div>
-      <div style={{display:"flex",gap:8,marginTop:4}}>
+      <div style={{display:"flex",gap:8}}>
         <button onClick={()=>setShowInstructions("general")} style={{
-          padding:"8px 14px",borderRadius:8,cursor:"pointer",
-          border:"1px solid #444",background:"transparent",color:"#aaa",
-          fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:2,transition:"all 0.2s",
-        }}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#A29BFE";e.currentTarget.style.color="#A29BFE";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#444";e.currentTarget.style.color="#aaa";}}>
+          flex:1,padding:"8px",borderRadius:8,cursor:"pointer",border:`1px solid ${T.btnBorder}`,
+          background:"transparent",color:T.btnText,fontFamily:T.font,fontSize:9,letterSpacing:2,transition:"all 0.2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accentColor;e.currentTarget.style.color=T.accentColor;}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.btnBorder;e.currentTarget.style.color=T.btnText;}}>
           ? HOW TO PLAY
         </button>
+        <button onClick={()=>setShowStats(true)} style={{
+          flex:1,padding:"8px",borderRadius:8,cursor:"pointer",border:`1px solid ${T.btnBorder}`,
+          background:"transparent",color:T.btnText,fontFamily:T.font,fontSize:9,letterSpacing:2,transition:"all 0.2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accentColor;e.currentTarget.style.color=T.accentColor;}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.btnBorder;e.currentTarget.style.color=T.btnText;}}>
+          📊 STATS
+        </button>
         <button onClick={()=>setEditing(true)} style={{
-          padding:"8px 14px",borderRadius:8,cursor:"pointer",
-          border:"1px solid #444",background:"transparent",color:"#aaa",
-          fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:2,transition:"all 0.2s",
-        }}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor="#A29BFE";e.currentTarget.style.color="#A29BFE";}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="#444";e.currentTarget.style.color="#aaa";}}>
+          flex:1,padding:"8px",borderRadius:8,cursor:"pointer",border:`1px solid ${T.btnBorder}`,
+          background:"transparent",color:T.btnText,fontFamily:T.font,fontSize:9,letterSpacing:2,transition:"all 0.2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accentColor;e.currentTarget.style.color=T.accentColor;}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=T.btnBorder;e.currentTarget.style.color=T.btnText;}}>
           ✎ EDIT
         </button>
       </div>
@@ -1144,72 +1251,63 @@ export default function PixelGo(){
     </Shell>
   );
 
-  /* ════ AI LEVEL SELECT ════ */
+  /* ════ AI LEVEL ════ */
   if(phase==="aiLevel") return(
-    <Shell>
-      <Logo name={config.gameName}/>
-      <SLabel>CHOOSE COMPUTER DIFFICULTY</SLabel>
+    <Shell T={T}>
+      <Logo name={config.gameName} T={T}/>
+      <SLabel T={T}>CHOOSE COMPUTER DIFFICULTY</SLabel>
       {Object.values(AI_LEVELS).map(lv=>(
         <button key={lv.key} onClick={()=>{setAiLevel(lv.key);setPhase("difficulty");}}
-          style={{width:"100%",padding:"16px",borderRadius:10,cursor:"pointer",marginBottom:10,
-            textAlign:"left",border:`2px solid ${lv.color}`,
-            background:hexToRgba(lv.color,0.08),
-            transition:"all 0.2s",fontFamily:"'Space Mono',monospace"}}
-          onMouseEnter={e=>{e.currentTarget.style.background=hexToRgba(lv.color,0.18);e.currentTarget.style.boxShadow=`0 0 20px ${hexToRgba(lv.color,0.35)}`;}}
-          onMouseLeave={e=>{e.currentTarget.style.background=hexToRgba(lv.color,0.08);e.currentTarget.style.boxShadow="none";}}>
-          <div style={{fontSize:14,fontWeight:"bold",letterSpacing:3,color:lv.color,marginBottom:5,
-            textShadow:`0 0 12px ${hexToRgba(lv.color,0.5)}`}}>🤖 {lv.label.toUpperCase()}</div>
+          style={{width:"100%",padding:"16px",borderRadius:10,cursor:"pointer",marginBottom:10,textAlign:"left",
+            border:`2px solid ${lv.color}`,background:hexToRgba(lv.color,0.08),transition:"all 0.2s",fontFamily:T.font}}
+          onMouseEnter={e=>{e.currentTarget.style.background=hexToRgba(lv.color,0.18);}}
+          onMouseLeave={e=>{e.currentTarget.style.background=hexToRgba(lv.color,0.08);}}>
+          <div style={{fontSize:13,fontWeight:"bold",letterSpacing:3,color:lv.color,marginBottom:4}}>🤖 {lv.label.toUpperCase()}</div>
           <div style={{fontSize:9,color:lv.color,opacity:0.85,letterSpacing:1}}>{lv.desc}</div>
         </button>
       ))}
-      <button onClick={()=>setShowInstructions("vscomputer")} style={{
-        width:"100%",padding:"10px",borderRadius:8,cursor:"pointer",marginBottom:10,
-        border:"1px solid #A29BFE",background:"rgba(162,155,254,0.08)",
-        color:"#A29BFE",fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:2,
-      }}>? HOW DOES THE COMPUTER PLAY</button>
+      <button onClick={()=>setShowInstructions("vscomputer")} style={{width:"100%",padding:"10px",borderRadius:8,
+        cursor:"pointer",marginBottom:10,border:`1px solid ${T.accentColor}`,background:hexToRgba(T.accentColor,0.08),
+        color:T.accentColor,fontFamily:T.font,fontSize:9,letterSpacing:2}}>? HOW DOES THE COMPUTER PLAY</button>
       {showInstructions&&<InstructionsModal topic={showInstructions} onClose={()=>setShowInstructions(false)}/>}
-      <GhostButton onClick={()=>setPhase("numSelect")}>← BACK</GhostButton>
+      <GhostButton onClick={()=>setPhase("numSelect")} T={T}>← BACK</GhostButton>
     </Shell>
   );
 
   /* ════ DIFFICULTY ════ */
   if(phase==="difficulty") return(
-    <Shell>
-      <Logo name={config.gameName}/>
-      <SLabel>{vsComputer?`VS COMPUTER (${AI_LEVELS[aiLevel]?.label})`:`${numPlayers} PLAYER${numPlayers>1?"S":""}`} · CHOOSE DIFFICULTY</SLabel>
+    <Shell T={T}>
+      <Logo name={config.gameName} T={T}/>
+      <SLabel T={T}>{vsComputer?`VS COMPUTER (${AI_LEVELS[aiLevel]?.label})`:teamMode?"2 VS 2":`${numPlayers} PLAYER${numPlayers>1?"S":""}`} · CHOOSE DIFFICULTY</SLabel>
       {Object.entries(config.difficulties).map(([key,d])=>(
         <div key={key} style={{width:"100%",display:"flex",gap:6,alignItems:"stretch",marginBottom:10}}>
           <div style={{flex:1}}>
-            <DiffBtn color={d.color} label={d.label} onClick={()=>goToGridSize(key)} noMargin>
+            <DiffBtn color={d.color} label={d.label} onClick={()=>goToGridSize(key)} noMargin T={T}>
               {d.line1}<br/>{d.line2}
             </DiffBtn>
           </div>
-          <button onClick={()=>setShowInstructions(key)} style={{
-            flexShrink:0,width:36,borderRadius:10,cursor:"pointer",
-            border:`2px solid ${d.color}`,background:hexToRgba(d.color,0.08),
-            color:d.color,fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:"bold",
-            transition:"all 0.2s",
-          }}
+          <button onClick={()=>setShowInstructions(key)} style={{flexShrink:0,width:36,borderRadius:10,
+            cursor:"pointer",border:`2px solid ${d.color}`,background:hexToRgba(d.color,0.08),
+            color:d.color,fontFamily:T.font,fontSize:14,fontWeight:"bold",transition:"all 0.2s"}}
             onMouseEnter={e=>{e.currentTarget.style.background=hexToRgba(d.color,0.25);}}
             onMouseLeave={e=>{e.currentTarget.style.background=hexToRgba(d.color,0.08);}}>?</button>
         </div>
       ))}
       {showInstructions&&<InstructionsModal topic={showInstructions} onClose={()=>setShowInstructions(false)}/>}
-      <GhostButton onClick={()=>setPhase(vsComputer?"aiLevel":"numSelect")}>← BACK</GhostButton>
+      <GhostButton onClick={()=>setPhase(vsComputer?"aiLevel":"numSelect")} T={T}>← BACK</GhostButton>
     </Shell>
   );
 
   /* ════ GRID SIZE ════ */
   if(phase==="gridSize") return(
-    <Shell>
-      <Logo name={config.gameName}/>
-      <SLabel>CHOOSE GRID SIZE</SLabel>
+    <Shell T={T}>
+      <Logo name={config.gameName} T={T}/>
+      <SLabel T={T}>CHOOSE GRID SIZE</SLabel>
       {Object.entries(config.gridSizes).map(([key,gs])=>(
-        <button key={key} onClick={()=>goToColorPick(key)}
+        <button key={key} onClick={()=>goToOptions(key)}
           style={{width:"100%",padding:"16px 20px",borderRadius:10,cursor:"pointer",marginBottom:10,
             textAlign:"left",border:`2px solid ${config.difficulties[difficulty].color}`,
-            background:hexToRgba(config.difficulties[difficulty].color,0.07),
-            transition:"all 0.2s",fontFamily:"'Space Mono',monospace"}}
+            background:hexToRgba(config.difficulties[difficulty].color,0.07),transition:"all 0.2s",fontFamily:T.font}}
           onMouseEnter={e=>{e.currentTarget.style.background=hexToRgba(config.difficulties[difficulty].color,0.18);}}
           onMouseLeave={e=>{e.currentTarget.style.background=hexToRgba(config.difficulties[difficulty].color,0.07);}}>
           <div style={{fontSize:13,fontWeight:"bold",letterSpacing:3,color:config.difficulties[difficulty].color,marginBottom:4}}>
@@ -1220,32 +1318,93 @@ export default function PixelGo(){
           </div>
         </button>
       ))}
-      <GhostButton onClick={()=>setPhase("difficulty")}>← BACK</GhostButton>
+      <GhostButton onClick={()=>setPhase("difficulty")} T={T}>← BACK</GhostButton>
     </Shell>
   );
+
+  /* ════ GAME OPTIONS ════ */
+  if(phase==="options"){
+    const diffColor=config.difficulties[difficulty].color;
+    function Toggle({label,value,options,onChange}){
+      return(
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+          padding:"10px 0",borderBottom:`1px solid ${T.border}`}}>
+          <span style={{fontSize:9,color:T.textDim,letterSpacing:1}}>{label}</span>
+          <div style={{display:"flex",gap:4}}>
+            {options.map(o=>(
+              <button key={o.v} onClick={()=>onChange(o.v)} style={{
+                padding:"4px 8px",borderRadius:6,cursor:"pointer",fontFamily:T.font,fontSize:8,letterSpacing:1,
+                border:`1px solid ${value===o.v?diffColor:T.btnBorder}`,
+                background:value===o.v?hexToRgba(diffColor,0.25):"transparent",
+                color:value===o.v?diffColor:T.textDim,transition:"all 0.15s"}}>{o.label}</button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return(
+      <Shell T={T}>
+        <Logo name={config.gameName} T={T}/>
+        <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap",justifyContent:"center"}}>
+          <Badge color={diffColor} T={T}>{difficulty.toUpperCase()}</Badge>
+          <Badge color={diffColor} T={T}>{config.gridSizes[gridSize].label.toUpperCase()}</Badge>
+        </div>
+        <SLabel T={T}>GAME OPTIONS</SLabel>
+        <div style={{width:"100%",marginBottom:20}}>
+          <Toggle label="TIMED TURNS" value={timedTurnSecs}
+            options={[{v:0,label:"OFF"},{v:15,label:"15s"},{v:30,label:"30s"},{v:60,label:"60s"}]}
+            onChange={setTimedTurnSecs}/>
+          <Toggle label="AUTO PASS" value={autoPass}
+            options={[{v:true,label:"ON"},{v:false,label:"OFF"}]}
+            onChange={setAutoPass}/>
+          <Toggle label="FUN MODE" value={funMode}
+            options={[{v:false,label:"OFF"},{v:true,label:"ON"}]}
+            onChange={setFunMode}/>
+          {USE_FOG&&(
+            <div style={{padding:"10px 0",borderBottom:`1px solid ${T.border}`}}>
+              <span style={{fontSize:9,color:"#FF4757",letterSpacing:1}}>👁 FOG OF WAR ENABLED</span>
+              <div style={{fontSize:8,color:T.textDim,marginTop:4}}>
+                Visibility range: {FOG_RANGE} cells from your territory
+              </div>
+            </div>
+          )}
+        </div>
+        <button onClick={goToColorPick} style={{
+          width:"100%",padding:"13px",borderRadius:8,border:"none",cursor:"pointer",
+          background:`linear-gradient(135deg,${diffColor},${hexToRgba(diffColor,0.6)})`,
+          color:"white",fontFamily:T.font,fontSize:12,fontWeight:"bold",letterSpacing:3,
+          boxShadow:`0 0 24px ${hexToRgba(diffColor,0.4)}`,marginBottom:10}}>
+          CONTINUE →
+        </button>
+        <GhostButton onClick={()=>setPhase("gridSize")} T={T}>← BACK</GhostButton>
+      </Shell>
+    );
+  }
 
   /* ════ PLAYER SETUP ════ */
   if(phase==="playerSetup"){
     const pickingPos=!!pendingColor,diffColor=diff.color;
     return(
-      <Shell wide={pickingPos}>
+      <Shell wide={pickingPos} T={T}>
         <div style={{display:"flex",gap:6,marginBottom:20}}>
           {Array.from({length:vsComputer?1:numPlayers},(_,i)=>(
             <div key={i} style={{width:32,height:5,borderRadius:3,
-              background:i<setupIdx?(playerDefs[i]?.hex||"#333"):i===setupIdx?"#eee":"#1a1a2e",
-              transition:"background 0.3s"}}/>
+              background:i<setupIdx?(playerDefs[i]?.hex||"#333"):i===setupIdx?T.text:T.border,transition:"background 0.3s"}}/>
           ))}
         </div>
         <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",justifyContent:"center"}}>
-          <Badge color={diffColor}>{difficulty.toUpperCase()}</Badge>
-          <Badge color={diffColor}>{config.gridSizes[gridSize].label.toUpperCase()}</Badge>
-          {vsComputer&&<Badge color="#A29BFE">VS 🤖 {AI_LEVELS[aiLevel]?.label.toUpperCase()}</Badge>}
+          <Badge color={diffColor} T={T}>{difficulty.toUpperCase()}</Badge>
+          <Badge color={diffColor} T={T}>{config.gridSizes[gridSize].label.toUpperCase()}</Badge>
+          {vsComputer&&<Badge color={T.accentColor} T={T}>VS 🤖 {AI_LEVELS[aiLevel]?.label.toUpperCase()}</Badge>}
+          {isDailyChallenge&&<Badge color="#FF9F43" T={T}>☀️ DAILY</Badge>}
+          {timedTurnSecs>0&&<Badge color="#FFD32A" T={T}>⏱ {timedTurnSecs}s</Badge>}
+          {funMode&&<Badge color="#2ED573" T={T}>🎮 FUN</Badge>}
         </div>
-        <div style={{fontSize:9,letterSpacing:3,color:"#bbb",marginBottom:4}}>
-          {vsComputer?"YOUR COLOUR":`PLAYER ${setupIdx+1} OF ${numPlayers}`}
+        <div style={{fontSize:9,letterSpacing:3,color:T.textDim,marginBottom:4}}>
+          {vsComputer||isDailyChallenge?"YOUR COLOUR":`PLAYER ${setupIdx+1} OF ${numPlayers}`}
         </div>
         <div style={{fontSize:17,fontWeight:"bold",letterSpacing:2,marginBottom:20,
-          color:pendingColor?pendingColor.hex:"#eee",
+          color:pendingColor?pendingColor.hex:T.text,
           textShadow:pendingColor?`0 0 20px ${hexToRgba(pendingColor.hex,0.6)}`:"none",
           transition:"all 0.3s",minHeight:26,textAlign:"center"}}>
           {pickingPos?`${pendingColor.name.toUpperCase()} — PICK YOUR START`:"CHOOSE YOUR COLOUR"}
@@ -1253,16 +1412,16 @@ export default function PixelGo(){
         {!pickingPos&&(
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:20,width:"100%",maxWidth:272}}>
             {config.teams.map(pc=>(
-              <ColorBtn key={pc.hex} pc={pc} taken={takenColors.includes(pc.hex)} onClick={()=>pickColor(pc)}/>
+              <ColorBtn key={pc.hex} pc={pc} taken={takenColors.includes(pc.hex)} onClick={()=>pickColor(pc)} T={T}/>
             ))}
           </div>
         )}
         {pickingPos&&(
           <>
             <MiniBoard board={sharedBoard} playerDefs={playerDefs} takenCells={takenCells}
-              curColor={pendingColor} onPick={pickPosition} BS={BS} palette={PALETTE}/>
-            <div style={{marginTop:8,fontSize:9,color:"#aaa",letterSpacing:1,textAlign:"center"}}>
-              {vsComputer?"CLICK TO PLACE YOUR START — COMPUTER PICKS OPPOSITE":"CLICK ANY CELL TO PLACE YOUR START"}
+              curColor={pendingColor} onPick={pickPosition} BS={BS} palette={PALETTE} T={T}/>
+            <div style={{marginTop:8,fontSize:9,color:T.textDim,letterSpacing:1,textAlign:"center"}}>
+              {vsComputer||isDailyChallenge?"CLICK TO PLACE YOUR START — COMPUTER PICKS OPPOSITE":"CLICK ANY CELL TO PLACE YOUR START"}
             </div>
           </>
         )}
@@ -1287,7 +1446,7 @@ export default function PixelGo(){
     const fs=Array(4).fill(0);
     if(usedO) for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){const v=usedO[r][c];if(v>=0) fs[v]++;}
     const winner=teamMode?null:playerDefs[topPlayer];
-    const winHex=teamMode?(topPlayer===0?"#FFD32A":"#A29BFE"):winner.hex;
+    const winHex=teamMode?(topPlayer===0?"#FFD32A":"#A29BFE"):winner?.hex||"#A29BFE";
     const winTeamName=topPlayer===0?"TEAM GOLD":"TEAM VIOLET";
     const solo1p=numPlayers===1,pct=Math.round(fs[0]/TOTAL*100);
     const vt=config.victoryText;
@@ -1300,18 +1459,18 @@ export default function PixelGo(){
       :null;
 
     if(reviewing&&usedO&&board) return(
-      <div style={{minHeight:"100vh",background:"#080812",display:"flex",flexDirection:"column",
-        alignItems:"center",justifyContent:"center",padding:"16px 10px",
-        fontFamily:"'Space Mono',monospace",color:"white",boxSizing:"border-box",gap:10}}>
+      <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",
+        alignItems:"center",justifyContent:"center",padding:"16px 10px",fontFamily:T.font,color:T.text,boxSizing:"border-box",gap:10}}>
         <style>{GLOBAL_CSS}</style>
-        <div style={{fontSize:9,letterSpacing:3,color:"#bbb",marginBottom:4}}>FINAL BOARD</div>
+        <div style={{fontSize:9,letterSpacing:3,color:T.textDim,marginBottom:4}}>FINAL BOARD</div>
         <div style={{display:"grid",gridTemplateColumns:`repeat(${BS},1fr)`,gridTemplateRows:`repeat(${BS},1fr)`,
-          gap:2,background:"#111",padding:3,borderRadius:8,border:"3px solid #333",
+          gap:2,background:T.gapColor,padding:3,borderRadius:T.pixelated?0:8,border:`3px solid ${T.border}`,
           width:"min(92vw,368px)",height:"min(92vw,368px)",boxSizing:"border-box",flexShrink:0}}>
           {Array.from({length:BS*BS},(_,k)=>{
             const r=Math.floor(k/BS),c=k%BS,owner=usedO[r][c],isOwned=owner>=0;
             return<div key={k} style={{background:isOwned?playerDefs[owner].hex:PALETTE[board[r][c]].hex,
-              filter:isOwned?"none":"saturate(0.2) brightness(0.5)"}}/>;
+              filter:isOwned?"none":"saturate(0.2) brightness(0.5)",
+              borderRadius:T.pixelated?0:T.cellRadius}}/>;
           })}
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",maxWidth:368}}>
@@ -1324,67 +1483,70 @@ export default function PixelGo(){
             </div>
           );})}
         </div>
-        <button onClick={()=>setReviewing(false)} style={{padding:"10px 22px",borderRadius:8,cursor:"pointer",
-          border:"2px solid #444",background:"transparent",color:"#ccc",
-          fontFamily:"'Space Mono',monospace",fontSize:11,letterSpacing:2}}>← BACK TO RESULTS</button>
+        <button onClick={()=>setReviewing(false)} style={{padding:"10px 22px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+          border:`2px solid ${T.border}`,background:"transparent",color:T.btnText,fontFamily:T.font,fontSize:11,letterSpacing:2}}>
+          ← BACK TO RESULTS
+        </button>
       </div>
     );
 
     return(
       <div style={{
         minHeight:"100vh",
-        background:solo1p&&!grade.victory
-          ?"radial-gradient(circle at 50% 40%, rgba(40,0,0,0.6) 0%, #080812 70%)"
-          :`radial-gradient(circle at 50% 40%, ${hexToRgba(winHex,0.2)} 0%, #080812 70%)`,
+        background:solo1p&&!grade?.victory
+          ?`radial-gradient(circle at 50% 40%, rgba(40,0,0,0.6) 0%, ${T.bg} 70%)`
+          :`radial-gradient(circle at 50% 40%, ${hexToRgba(winHex,0.2)} 0%, ${T.bg} 70%)`,
         display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-        padding:"24px 16px",fontFamily:"'Space Mono',monospace",color:"white",boxSizing:"border-box",gap:8,
-      }}>
+        padding:"24px 16px",fontFamily:T.font,color:T.text,boxSizing:"border-box",gap:8}}>
         <style>{GLOBAL_CSS}</style>
-        <div style={{fontSize:64,lineHeight:1}}>{solo1p?grade.icon:winner.isAI?"🤖":"🏆"}</div>
+        {isDailyChallenge&&<div style={{fontSize:10,color:"#FF9F43",letterSpacing:2,marginBottom:4}}>
+          ☀️ DAILY CHALLENGE COMPLETE — {getTodayStr()}
+        </div>}
+        <div style={{fontSize:64,lineHeight:1}}>{solo1p?grade?.icon:teamMode?"⚔️":winner?.isAI?"🤖":"🏆"}</div>
         <div style={{fontSize:solo1p?20:15,fontWeight:"bold",letterSpacing:4,
-          color:solo1p&&!grade.victory?"#FF4757":winHex,
-          textShadow:`0 0 32px ${solo1p&&!grade.victory?"rgba(255,71,87,0.7)":hexToRgba(winHex,0.8)}`,
-          textAlign:"center",animation:!solo1p||grade.victory?"glow-pulse 2s ease-in-out infinite":"none"}}>
-          {solo1p?grade.title:teamMode?"TEAM VICTORY":winner.isAI?"COMPUTER WINS":"VICTORY"}
+          color:solo1p&&!grade?.victory?"#FF4757":winHex,
+          textShadow:`0 0 32px ${solo1p&&!grade?.victory?"rgba(255,71,87,0.7)":hexToRgba(winHex,0.8)}`,
+          textAlign:"center",animation:!solo1p||grade?.victory?"glow-pulse 2s ease-in-out infinite":"none"}}>
+          {solo1p?grade?.title:teamMode?"TEAM VICTORY":winner?.isAI?"COMPUTER WINS":"VICTORY"}
         </div>
         {!solo1p&&teamMode&&(
-          <div style={{fontSize:24,fontWeight:"bold",color:winHex,textAlign:"center",
-            textShadow:`0 0 20px ${hexToRgba(winHex,0.6)}`}}>
+          <div style={{fontSize:22,fontWeight:"bold",color:winHex,textAlign:"center",textShadow:`0 0 20px ${hexToRgba(winHex,0.6)}`}}>
             {winTeamName}
             <div style={{fontSize:11,color:hexToRgba(winHex,0.7),marginTop:4}}>
-              {playerDefs.filter((_,i)=>i%2===topPlayer%2).map(d=>d.name).join(" + ")}
+              {playerDefs.filter((_,i)=>i%2===topPlayer%2).map(d=>d?.name||"").join(" + ")}
             </div>
           </div>
         )}
-        {!solo1p&&!teamMode&&<div style={{fontSize:24,fontWeight:"bold",color:winHex,textAlign:"center",
-          textShadow:`0 0 20px ${hexToRgba(winHex,0.6)}`}}>{winner.name}{winner.isAI?" 🤖":""}</div>}
-        <div style={{color:solo1p&&!grade.victory?"#FF474788":hexToRgba(winHex,0.6),
-          fontSize:10,letterSpacing:1,textAlign:"center"}}>
-          {solo1p?grade.sub:teamMode?`${teamScores[topPlayer]} vs ${teamScores[1-topPlayer]} cells · ${turnNum-1} turns`:`P${topPlayer+1} ${config.multiWinText} · ${turnNum-1} turns played`}
+        {!solo1p&&!teamMode&&winner&&(
+          <div style={{fontSize:22,fontWeight:"bold",color:winHex,textAlign:"center",textShadow:`0 0 20px ${hexToRgba(winHex,0.6)}`}}>
+            {winner.name}{winner.isAI?" 🤖":""}
+          </div>
+        )}
+        <div style={{color:solo1p&&!grade?.victory?"#FF474788":hexToRgba(winHex,0.6),fontSize:10,letterSpacing:1,textAlign:"center"}}>
+          {solo1p?grade?.sub:teamMode?`${teamScores[topPlayer]||0} vs ${teamScores[1-topPlayer]||0} cells · ${turnNum-1} turns`:`P${topPlayer+1} ${config.multiWinText} · ${turnNum-1} turns`}
         </div>
         <div style={{width:"100%",maxWidth:280}}>
           {Array.from({length:numPlayers},(_,i)=>{
-            const def=playerDefs[i],isWinner=i===topPlayer&&numPlayers>1;
-            const rank=numPlayers>1?[...Array(numPlayers).keys()].sort((a,b)=>fs[b]-fs[a]).indexOf(i)+1:null;
+            const def=playerDefs[i];
             const teamColor=teamMode?(i%2===0?"#FFD32A":"#A29BFE"):null;
-            const isWinningTeam=teamMode&&(i%2===topPlayer%2);
+            const isWinner=(!teamMode&&i===topPlayer&&numPlayers>1)||(teamMode&&i%2===topPlayer%2);
+            const rank=numPlayers>1&&!teamMode?[...Array(numPlayers).keys()].sort((a,b)=>fs[b]-fs[a]).indexOf(i)+1:null;
             return(
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,
-                padding:"8px 12px",borderRadius:8,
-                background:(isWinner||isWinningTeam)?hexToRgba(teamColor||def.hex,0.15):"transparent",
-                border:(isWinner||isWinningTeam)?`1px solid ${hexToRgba(teamColor||def.hex,0.4)}`:"1px solid transparent"}}>
-                {teamMode&&<div style={{width:18,height:18,borderRadius:"50%",
-                  background:teamColor,display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:8,fontWeight:"bold",color:"black",flexShrink:0}}>{i%2===0?"▲":"▼"}</div>}
-                {numPlayers>1&&!teamMode&&<div style={{width:18,height:18,borderRadius:"50%",background:isWinner?def.hex:"#1a1a2e",
+                padding:"8px 12px",borderRadius:T.pixelated?0:8,
+                background:isWinner?hexToRgba(teamColor||def.hex,0.15):"transparent",
+                border:isWinner?`1px solid ${hexToRgba(teamColor||def.hex,0.4)}`:"1px solid transparent"}}>
+                {teamMode&&<div style={{width:18,height:18,borderRadius:"50%",background:teamColor,
                   display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:8,fontWeight:"bold",color:"black",flexShrink:0}}>{i%2===0?"▲":"▼"}</div>}
+                {!teamMode&&numPlayers>1&&<div style={{width:18,height:18,borderRadius:"50%",
+                  background:isWinner?def.hex:"#1a1a2e",display:"flex",alignItems:"center",justifyContent:"center",
                   fontSize:8,fontWeight:"bold",color:isWinner?"white":"#555",flexShrink:0}}>{rank}</div>}
                 <div style={{width:9,height:9,borderRadius:"50%",background:def.hex,boxShadow:`0 0 6px ${def.hex}`,flexShrink:0}}/>
-                <span style={{flex:1,color:isWinner?def.hex:"#aaa",fontSize:10}}>{def.name}{def.isAI?" 🤖":""}</span>
-                <span style={{fontWeight:"bold",fontSize:14,color:isWinner?def.hex:"#aaa"}}>{fs[i]}</span>
-                <div style={{width:48,height:3,background:"#222",borderRadius:2,flexShrink:0}}>
-                  <div style={{height:"100%",borderRadius:2,background:def.hex,
-                    width:`${(fs[i]/TOTAL)*100}%`,boxShadow:`0 0 4px ${def.hex}`}}/>
+                <span style={{flex:1,color:isWinner?def.hex:T.textDim,fontSize:10}}>{def.name}{def.isAI?" 🤖":""}</span>
+                <span style={{fontWeight:"bold",fontSize:14,color:isWinner?def.hex:T.textDim}}>{fs[i]}</span>
+                <div style={{width:48,height:3,background:T.border,borderRadius:2,flexShrink:0}}>
+                  <div style={{height:"100%",borderRadius:2,background:def.hex,width:`${(fs[i]/TOTAL)*100}%`,boxShadow:`0 0 4px ${def.hex}`}}/>
                 </div>
               </div>
             );
@@ -1392,96 +1554,137 @@ export default function PixelGo(){
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
           <GlowButton hex={winHex} onClick={()=>setReviewing(true)}>VIEW BOARD</GlowButton>
-          <GlowButton hex={winHex} onClick={()=>goToColorPick(gridSize)}>PLAY AGAIN</GlowButton>
-          <GhostButton onClick={resetToMenu}>MENU</GhostButton>
+          <GlowButton hex={winHex} onClick={()=>{resetToMenu();setTimeout(()=>setPhase("playerSetup"),50);}}>PLAY AGAIN</GlowButton>
+          <GhostButton onClick={resetToMenu} T={T}>MENU</GhostButton>
         </div>
       </div>
     );
   }
 
   /* ════ PLAYING ════ */
-  const curDef=playerDefs[cp],curHex=curDef.hex;
+  const curDef=playerDefs[cp],curHex=curDef?.hex||"#A29BFE";
   const curGlow=hexToRgba(curHex,0.5),curDim=hexToRgba(curHex,0.15);
-  const hasCaptured=captureCount>0,diffColor=diff.color;
+  const hasCaptured=captureCount>0;
   const isAITurn=curDef?.isAI;
+  const diffColor=diff?.color||"#888";
+  const timerPct=timedTurnSecs>0&&timeLeft!=null?timeLeft/timedTurnSecs:1;
+  const timerColor=timerPct>0.5?"#2ED573":timerPct>0.25?"#FFD32A":"#FF4757";
 
   return(
-    <div style={{height:"100dvh",maxHeight:"100dvh",overflow:"hidden",background:"#080812",
+    <div style={{height:"100dvh",maxHeight:"100dvh",overflow:"hidden",background:T.bg,
       display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-      padding:"8px 10px",fontFamily:"'Space Mono',monospace",color:"white",boxSizing:"border-box",gap:5}}>
+      padding:"8px 10px",fontFamily:T.font,color:T.text,boxSizing:"border-box",gap:4}}>
       <style>{GLOBAL_CSS}</style>
 
+      {/* ── Combo banner ── */}
+      {funMode&&showCombo&&(
+        <div className="combo-pop" style={{
+          position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+          zIndex:100,fontSize:32,fontWeight:"bold",letterSpacing:4,
+          color:"#FFD32A",textShadow:"0 0 30px rgba(255,211,42,0.8)",
+          pointerEvents:"none",fontFamily:T.font}}>
+          COMBO ×{comboStreak+1}!
+        </div>
+      )}
+
+      {/* ── Auto pass notification ── */}
+      {autoPassActive&&(
+        <div style={{
+          position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",
+          zIndex:100,background:hexToRgba(curHex,0.9),borderRadius:10,padding:"12px 20px",
+          fontSize:11,fontWeight:"bold",letterSpacing:2,color:"white",fontFamily:T.font,
+          pointerEvents:"none",textAlign:"center"}}>
+          NO MOVES<br/>AUTO-PASSING...
+        </div>
+      )}
+
       {/* ── Turn banner ── */}
-      <div style={{width:"100%",maxWidth:380,flexShrink:0,borderRadius:10,background:curDim,
-        border:`2px solid ${hexToRgba(curHex,0.55)}`,boxShadow:`0 0 32px ${hexToRgba(curHex,0.35)}`,
+      <div style={{width:"100%",maxWidth:380,flexShrink:0,borderRadius:T.pixelated?0:10,
+        background:curDim,border:`2px solid ${hexToRgba(curHex,0.55)}`,
+        boxShadow:`0 0 32px ${hexToRgba(curHex,0.35)}`,
         padding:"10px 16px",display:"flex",alignItems:"center",gap:12,
-        transition:"border-color 0.35s, box-shadow 0.35s, background 0.35s",minHeight:64,overflow:"hidden"}}>
+        transition:"border-color 0.35s, box-shadow 0.35s, background 0.35s",minHeight:60,overflow:"hidden"}}>
         <div style={{flexShrink:0,position:"relative",width:20,height:20}}>
           <div className="ring-pulse" style={{position:"absolute",inset:-5,borderRadius:"50%",
             border:`2px solid ${curHex}`,pointerEvents:"none"}}/>
           <div style={{width:20,height:20,borderRadius:"50%",background:curHex,boxShadow:`0 0 14px ${curGlow}`}}/>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{color:curHex,fontWeight:"bold",fontSize:15,letterSpacing:2,
+          <div style={{color:curHex,fontWeight:"bold",fontSize:14,letterSpacing:2,
             textShadow:`0 0 14px ${curGlow}`,lineHeight:1.2}}>
-            {curDef.name.toUpperCase()}{isAITurn?" 🤖":""}
+            {curDef?.name?.toUpperCase()}{isAITurn?" 🤖":""}
+            {funMode&&comboStreak>1&&!isAITurn&&(
+              <span style={{fontSize:9,color:"#FFD32A",marginLeft:8}}>🔥×{comboStreak}</span>
+            )}
           </div>
           <div style={{color:hexToRgba(curHex,0.7),fontSize:9,letterSpacing:1,marginTop:2}}>
-            {isAITurn&&aiThinking ? "THINKING..."
-              : isAITurn ? "COMPUTER IS DECIDING..."
-              : hoverColourName
-                ? hoverIsClickable
-                  ? `CAPTURE ${hoverColourName.toUpperCase()} → ${previewCells.size} CELLS`
-                  : `${hoverColourName.toUpperCase()} — NOT REACHABLE`
-                : hasCaptured
-                  ? "CAPTURED — TAP ANOTHER GROUP TO CHANGE OR END TURN"
-                  : `TURN ${turnNum} · PLAYER ${cp+1}${difficulty==="easy"?` · ${scores[cp]} CELLS`:""}`}
+            {isAITurn&&aiThinking?"THINKING..."
+              :isAITurn?"COMPUTER IS DECIDING..."
+              :autoPassActive?"NO MOVES — AUTO PASSING..."
+              :hoverColourName
+                ?hoverIsClickable
+                  ?`CAPTURE ${hoverColourName.toUpperCase()} → ${previewCells.size} CELLS`
+                  :`${hoverColourName.toUpperCase()} — NOT REACHABLE`
+                :hasCaptured
+                  ?"CAPTURED — TAP ANOTHER GROUP TO CHANGE OR END TURN"
+                  :`TURN ${turnNum} · P${cp+1}${difficulty==="easy"?` · ${scores[cp]} CELLS`:""}`}
           </div>
         </div>
         <div style={{textAlign:"right",minWidth:52,flexShrink:0}}>
-          {isAITurn?(
-            <div className="ai-thinking" style={{color:curHex,fontSize:18}}>⚙</div>
-          ):previewCells.size>0?(
-            <>
-              <div style={{color:curHex,fontWeight:"bold",fontSize:20,lineHeight:1,
-                textShadow:`0 0 12px ${curGlow}`}}>{previewCells.size}</div>
-              <div style={{color:hexToRgba(curHex,0.7),fontSize:8,letterSpacing:1}}>CELLS</div>
-            </>
-          ):hasCaptured?(
-            <div style={{color:hexToRgba(curHex,0.7),fontSize:8,letterSpacing:1,lineHeight:1.8}}>
-              {difficulty==="easy"?scores[cp]:"·"}<br/>CELLS
-            </div>
-          ):(
-            <div style={{color:"#666",fontSize:8,letterSpacing:1,lineHeight:1.8}}>
-              CLICK A<br/>BORDER<br/>CELL
-            </div>
-          )}
+          {isAITurn?(<div className="ai-thinking" style={{color:curHex,fontSize:18}}>⚙</div>)
+            :previewCells.size>0?(
+              <><div style={{color:curHex,fontWeight:"bold",fontSize:20,lineHeight:1,textShadow:`0 0 12px ${curGlow}`}}>{previewCells.size}</div>
+              <div style={{color:hexToRgba(curHex,0.7),fontSize:8,letterSpacing:1}}>CELLS</div></>
+            ):hasCaptured?(
+              <div style={{color:hexToRgba(curHex,0.7),fontSize:8,letterSpacing:1,lineHeight:1.8}}>
+                {difficulty==="easy"?scores[cp]:"·"}<br/>CELLS
+              </div>
+            ):(
+              <div style={{color:T.textFaint,fontSize:8,letterSpacing:1,lineHeight:1.8}}>CLICK A<br/>BORDER<br/>CELL</div>
+            )}
         </div>
       </div>
 
-      {/* ── Round bar ── */}
-      <div style={{display:"flex",alignItems:"center",gap:6,width:"100%",maxWidth:380,flexShrink:0}}>
-        <Badge color={diffColor}>{difficulty.toUpperCase()}</Badge>
-        <Badge color={diffColor}>{config.gridSizes[gridSize].label.toUpperCase()}</Badge>
-        <span style={{color:"#888",fontSize:9,letterSpacing:1,whiteSpace:"nowrap"}}>{UNLIMITED?`TURN ${turnNum}`:`RND ${round}/${MAX_ROUNDS}`}</span>
-        <div style={{flex:1,height:2,background:"#1a1a2e",borderRadius:1}}>
-          <div style={{height:"100%",borderRadius:1,
-            background:`linear-gradient(90deg,${playerDefs[0].hex},${playerDefs[numPlayers-1].hex})`,
-            width:`${(round/MAX_ROUNDS)*100}%`,transition:"width 0.4s"}}/>
+      {/* ── Timer bar ── */}
+      {timedTurnSecs>0&&timeLeft!=null&&!isAITurn&&(
+        <div style={{width:"100%",maxWidth:380,flexShrink:0}}>
+          <div style={{height:4,background:T.border,borderRadius:2,overflow:"hidden"}}>
+            <div style={{height:"100%",borderRadius:2,background:timerColor,
+              width:`${timerPct*100}%`,transition:"width 1s linear, background 0.5s"}}/>
+          </div>
+          <div style={{textAlign:"right",fontSize:8,color:timerColor,marginTop:2,letterSpacing:1}}>⏱ {timeLeft}s</div>
         </div>
-        {difficulty==="easy"&&<span style={{color:"#888",fontSize:9,letterSpacing:1,whiteSpace:"nowrap"}}>{Math.round(claimed/TOTAL*100)}%</span>}
+      )}
+
+      {/* ── Round / info bar ── */}
+      <div style={{display:"flex",alignItems:"center",gap:5,width:"100%",maxWidth:380,flexShrink:0}}>
+        <Badge color={diffColor} T={T}>{difficulty.toUpperCase()}</Badge>
+        {isDailyChallenge&&<Badge color="#FF9F43" T={T}>☀️</Badge>}
+        {USE_FOG&&<Badge color="#FF4757" T={T}>👁 FOG</Badge>}
+        {funMode&&<Badge color="#2ED573" T={T}>🎮</Badge>}
+        <span style={{color:T.textDim,fontSize:9,letterSpacing:1,whiteSpace:"nowrap"}}>
+          {UNLIMITED?`T${turnNum}`:`R${round}/${MAX_ROUNDS}`}
+        </span>
+        <div style={{flex:1,height:2,background:T.border,borderRadius:1}}>
+          {!UNLIMITED&&<div style={{height:"100%",borderRadius:1,
+            background:`linear-gradient(90deg,${playerDefs[0]?.hex},${playerDefs[numPlayers-1]?.hex})`,
+            width:`${(round/MAX_ROUNDS)*100}%`,transition:"width 0.4s"}}/>}
+        </div>
+        {difficulty==="easy"&&<span style={{color:T.textDim,fontSize:9,letterSpacing:1,whiteSpace:"nowrap"}}>{Math.round(claimed/TOTAL*100)}%</span>}
       </div>
 
       {/* ── Board ── */}
       <div onMouseLeave={()=>setHovered(null)} style={{
         display:"grid",gridTemplateColumns:`repeat(${BS},1fr)`,gridTemplateRows:`repeat(${BS},1fr)`,
-        gap:2,background:"#111",padding:3,borderRadius:8,
-        border:`3px solid ${hexToRgba(curHex,0.55)}`,
-        boxShadow:`0 0 40px ${hexToRgba(curHex,0.35)}`,
+        gap:T.pixelated?1:2,background:T.gapColor,padding:T.pixelated?1:3,
+        borderRadius:T.pixelated?0:8,
+        border:`${T.pixelated?2:3}px solid ${hexToRgba(curHex,0.55)}`,
+        boxShadow:T.pixelated?`2px 2px 0 ${curHex}`:(`0 0 40px ${hexToRgba(curHex,0.35)}`),
         width:"min(90vw,360px)",height:"min(90vw,360px)",
         flexShrink:0,boxSizing:"border-box",
         transition:"border-color 0.35s, box-shadow 0.35s",touchAction:"none",
-        opacity:isAITurn?0.85:1,
+        opacity:isAITurn?0.88:1,
+        imageRendering:T.pixelated?"pixelated":"auto",
       }}>
         {Array.from({length:BS*BS},(_,k)=>{
           const r=Math.floor(k/BS),c=k%BS;
@@ -1492,176 +1695,207 @@ export default function PixelGo(){
           const isEnclosedFlash=enclosedFlash&&enclosedFlash.has(k);
           const isAutoFlash=autoFlash&&autoFlash.has(k);
           const isLegendHighlight=legendFocus!==null&&!isOwned&&board[r][c]===legendFocus;
-          const bgColor=isOwned?playerDefs[owner].hex:PALETTE[board[r][c]].hex;
-          const cellFilter=isOwned?"none"
+
+          // Fog of war
+          const isFogged=visibleCells&&!visibleCells.has(k)&&!isOwned;
+
+          // Ripple delay
+          let rippleDelay=null;
+          if(rippleOrigin&&isFlash){
+            const dist=Math.sqrt((r-rippleOrigin.r)**2+(c-rippleOrigin.c)**2);
+            rippleDelay=`${Math.round(dist*55)}ms`;
+          }
+
+          // Border territory animation: owned by current human player with adjacent non-owned
+          const isTerrBorder=isOwned&&owner===cp&&!isAITurn&&
+            [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].some(([nr,nc])=>
+              nr>=0&&nr<BS&&nc>=0&&nc<BS&&ownership[nr][nc]!==cp
+            );
+
+          const bgColor=isFogged?"#050508":isOwned?playerDefs[owner].hex:PALETTE[board[r][c]].hex;
+          const cellFilter=isFogged?"none":isOwned?"none"
             :isLegendHighlight?"none"
             :legendFocus!==null?"saturate(0.15) brightness(0.5)"
             :"saturate(0.28) brightness(0.72)";
+
           return(
             <div key={k} onClick={()=>handleBoardClick(r,c)} onMouseEnter={()=>{if(!isAITurn) setHovered([r,c]);}}
-              title={!isOwned?PALETTE[board[r][c]]?.name:""}
+              title={!isOwned&&!isFogged?PALETTE[board[r][c]]?.name:""}
               style={{background:bgColor,position:"relative",cursor:isClickable?"pointer":"default",
-                filter:cellFilter,willChange:"filter"}}>
+                filter:cellFilter,willChange:"filter",
+                borderRadius:T.pixelated?0:T.cellRadius}}>
+              {/* Territory border glow */}
+              {isTerrBorder&&!isPrev&&(
+                <div className="terr-border" style={{position:"absolute",inset:0,
+                  boxShadow:`inset 0 0 0 2px ${hexToRgba(curHex,0.85)}`,
+                  borderRadius:T.pixelated?0:T.cellRadius,pointerEvents:"none"}}/>
+              )}
+              {/* Preview */}
               {isPrev&&<div style={{position:"absolute",inset:0,background:hexToRgba(curHex,0.68),
-                border:`2px solid ${curHex}`,boxSizing:"border-box",pointerEvents:"none"}}/>}
+                border:`2px solid ${curHex}`,boxSizing:"border-box",pointerEvents:"none",
+                borderRadius:T.pixelated?0:T.cellRadius}}/>}
+              {/* Clickable shimmer */}
               {isClickable&&!isPrev&&<div className="cell-pulse" style={{position:"absolute",inset:0,
-                border:`2px solid ${curHex}`,boxSizing:"border-box",pointerEvents:"none"}}/>}
+                border:`2px solid ${curHex}`,boxSizing:"border-box",pointerEvents:"none",
+                borderRadius:T.pixelated?0:T.cellRadius}}/>}
+              {/* Legend highlight */}
               {isLegendHighlight&&!isPrev&&!isClickable&&<div style={{position:"absolute",inset:0,
-                border:`2px solid ${PALETTE[legendFocus]?.hex}`,boxSizing:"border-box",pointerEvents:"none",opacity:0.9}}/>}
-              {isFlash&&<div className="flash-burst" style={{position:"absolute",inset:0,background:"white",pointerEvents:"none"}}/>}
-              {isEnclosedFlash&&!isFlash&&<div className="enclosed-burst" style={{position:"absolute",inset:0,background:"#FFD32A",pointerEvents:"none"}}/>}
-              {isAutoFlash&&!isFlash&&!isEnclosedFlash&&<div className="auto-burst" style={{position:"absolute",inset:0,background:playerDefs[cp].hex,pointerEvents:"none"}}/>}
+                border:`2px solid ${PALETTE[legendFocus]?.hex}`,boxSizing:"border-box",pointerEvents:"none",
+                borderRadius:T.pixelated?0:T.cellRadius,opacity:0.9}}/>}
+              {/* Ripple capture */}
+              {isFlash&&<div style={{position:"absolute",inset:0,background:"white",pointerEvents:"none",
+                borderRadius:T.pixelated?0:T.cellRadius,
+                animation:`flash-ripple 0.5s ease ${rippleDelay||"0ms"} forwards`}}/>}
+              {/* Enclosure flash */}
+              {isEnclosedFlash&&!isFlash&&<div className="enclosed-burst" style={{position:"absolute",inset:0,
+                background:"#FFD32A",pointerEvents:"none",borderRadius:T.pixelated?0:T.cellRadius}}/>}
+              {/* Auto-claim flash */}
+              {isAutoFlash&&!isFlash&&!isEnclosedFlash&&<div className="auto-burst" style={{position:"absolute",inset:0,
+                background:playerDefs[cp]?.hex||"#fff",pointerEvents:"none",borderRadius:T.pixelated?0:T.cellRadius}}/>}
+              {/* Fog of war */}
+              {isFogged&&<div style={{position:"absolute",inset:0,
+                background:"rgba(0,0,0,0.85)",pointerEvents:"none",
+                borderRadius:T.pixelated?0:T.cellRadius,
+                display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{fontSize:Math.max(4,Math.floor(360/BS/3)),opacity:0.3,color:"#fff"}}>▪</span>
+              </div>}
             </div>
           );
         })}
       </div>
 
-      {/* ── Legend (easy) ── */}
+      {/* ── Colour legend (easy) ── */}
       {difficulty==="easy"&&(
         <div style={{display:"flex",gap:4,width:"100%",maxWidth:380,flexShrink:0,overflowX:"auto",paddingBottom:2}}>
-          {PALETTE.map((bc,idx)=>{
-            const f=legendFocus===idx;
-            return(
-              <button key={idx} onClick={()=>setLegendFocus(f?null:idx)} title={bc.name}
-                style={{flexShrink:0,width:24,height:24,borderRadius:6,cursor:"pointer",background:bc.hex,
-                  border:f?"2px solid white":"2px solid transparent",boxShadow:f?`0 0 10px ${bc.hex}`:"none",
-                  transition:"all 0.15s",transform:f?"scale(1.25)":"scale(1)",padding:0}}/>
-            );
-          })}
-          {legendFocus!==null&&(
-            <div style={{display:"flex",alignItems:"center",color:PALETTE[legendFocus]?.hex,
-              fontSize:9,letterSpacing:1,paddingLeft:4,whiteSpace:"nowrap"}}>
-              {PALETTE[legendFocus]?.name?.toUpperCase()}
-            </div>
-          )}
+          {PALETTE.map((bc,idx)=>{const f=legendFocus===idx;return(
+            <button key={idx} onClick={()=>setLegendFocus(f?null:idx)} title={bc.name}
+              style={{flexShrink:0,width:24,height:24,borderRadius:T.pixelated?0:6,cursor:"pointer",
+                background:bc.hex,border:f?"2px solid white":"2px solid transparent",
+                boxShadow:f?`0 0 10px ${bc.hex}`:"none",transition:"all 0.15s",
+                transform:f?"scale(1.25)":"scale(1)",padding:0}}/>
+          );})}
+          {legendFocus!==null&&<div style={{display:"flex",alignItems:"center",
+            color:PALETTE[legendFocus]?.hex,fontSize:9,letterSpacing:1,paddingLeft:4,whiteSpace:"nowrap"}}>
+            {PALETTE[legendFocus]?.name?.toUpperCase()}
+          </div>}
         </div>
       )}
 
       {/* ── Victory assured banner ── */}
       {victoryAssured&&(
-        <div style={{width:"100%",maxWidth:380,flexShrink:0,borderRadius:10,padding:"10px 14px",
+        <div style={{width:"100%",maxWidth:380,flexShrink:0,borderRadius:T.pixelated?0:10,padding:"8px 14px",
           background:hexToRgba(victoryAssured.hex,0.18),
           border:`2px solid ${hexToRgba(victoryAssured.hex,0.7)}`,
           boxShadow:`0 0 20px ${hexToRgba(victoryAssured.hex,0.35)}`,
           display:"flex",alignItems:"center",gap:10}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{color:victoryAssured.hex,fontWeight:"bold",fontSize:10,letterSpacing:2,marginBottom:3}}>
+            <div style={{color:victoryAssured.hex,fontWeight:"bold",fontSize:10,letterSpacing:2,marginBottom:2}}>
               {victoryAssured.name.toUpperCase()}
             </div>
             <div style={{color:hexToRgba(victoryAssured.hex,0.8),fontSize:8,letterSpacing:1}}>
               {config.victoryAssuredText}
             </div>
           </div>
-          <button onClick={()=>{setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");}} style={{
-            flexShrink:0,padding:"6px 10px",borderRadius:6,cursor:"pointer",
+          <button onClick={()=>{updateStatsOnGameEnd(ownership,0);setFinalOwnership(ownership);music.sfxVictory();setPhase("gameover");}} style={{
+            flexShrink:0,padding:"6px 10px",borderRadius:T.pixelated?0:6,cursor:"pointer",
             border:`1px solid ${victoryAssured.hex}`,background:hexToRgba(victoryAssured.hex,0.25),
-            color:victoryAssured.hex,fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:1}}>END NOW</button>
+            color:victoryAssured.hex,fontFamily:T.font,fontSize:8,letterSpacing:1}}>END NOW</button>
           <button onClick={()=>setVictoryAssured(null)} style={{
-            flexShrink:0,padding:"6px 10px",borderRadius:6,cursor:"pointer",
-            border:"1px solid #444",background:"transparent",
-            color:"#aaa",fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:1}}>PLAY ON</button>
+            flexShrink:0,padding:"6px 10px",borderRadius:T.pixelated?0:6,cursor:"pointer",
+            border:`1px solid ${T.btnBorder}`,background:"transparent",
+            color:T.btnText,fontFamily:T.font,fontSize:8,letterSpacing:1}}>PLAY ON</button>
         </div>
       )}
 
       {/* ── Score cards ── */}
-      <div style={{display:"flex",gap:6,width:"100%",maxWidth:380,flexShrink:0}}>
+      <div style={{display:"flex",gap:5,width:"100%",maxWidth:380,flexShrink:0}}>
         {Array.from({length:numPlayers},(_,i)=>{
           const def=playerDefs[i],isCur=i===cp,showScore=difficulty==="easy"||showScores;
+          const teamColor=teamMode?(i%2===0?"#FFD32A":"#A29BFE"):null;
           return(
-            <div key={i} style={{flex:1,background:isCur?hexToRgba(def.hex,0.15):"#0d0d1a",
-              border:`1px solid ${isCur?hexToRgba(def.hex,0.6):"#111"}`,
-              borderRadius:8,padding:"6px 4px",textAlign:"center",
+            <div key={i} style={{flex:1,background:isCur?hexToRgba(def.hex,0.15):T.cardBg,
+              border:`1px solid ${isCur?hexToRgba(def.hex,0.6):T.border}`,
+              borderRadius:T.pixelated?0:8,padding:"5px 4px",textAlign:"center",
               boxShadow:isCur?`0 0 18px ${hexToRgba(def.hex,0.35)}`:"none",transition:"all 0.3s"}}>
-              <div style={{fontSize:9,marginBottom:1}}>{def.isAI?"🤖":""}</div>
+              {def.isAI&&<div style={{fontSize:8,lineHeight:1}}>🤖</div>}
+              {teamMode&&<div style={{fontSize:7,color:teamColor,lineHeight:1}}>{i%2===0?"▲":"▼"}</div>}
               <div style={{width:9,height:9,borderRadius:"50%",background:def.hex,
-                margin:"0 auto 3px",boxShadow:`0 0 ${isCur?12:4}px ${def.hex}`}}/>
+                margin:"1px auto 3px",boxShadow:`0 0 ${isCur?12:4}px ${def.hex}`}}/>
               {showScore
-                ?<div style={{fontSize:16,fontWeight:"bold",color:isCur?def.hex:"#ccc",lineHeight:1,
+                ?<div style={{fontSize:15,fontWeight:"bold",color:isCur?def.hex:T.textDim,lineHeight:1,
                   animation:showScores&&difficulty!=="easy"?"glow-pulse 1.5s ease-in-out 3":"none"}}>{scores[i]}</div>
-                :<div style={{fontSize:8,color:isCur?def.hex:"#555",lineHeight:1}}>
-                  {"▓".repeat(Math.min(5,Math.ceil(scores[i]/TOTAL*5)))}
+                :<div style={{fontSize:8,color:isCur?def.hex:T.textFaint,lineHeight:1}}>
+                  {"▓".repeat(Math.min(5,Math.ceil(scores[i]/TOTAL*5)))||"·"}
                 </div>
               }
-              <div style={{fontSize:6,color:isCur?hexToRgba(def.hex,0.85):"#666",letterSpacing:0.5,margin:"3px 0 4px",lineHeight:1.2}}>
+              <div style={{fontSize:5,color:isCur?hexToRgba(def.hex,0.85):T.textFaint,
+                letterSpacing:0.3,margin:"2px 0 3px",lineHeight:1.2,overflow:"hidden",
+                whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
                 {def.name.toUpperCase()}
-                {teamMode&&<span style={{color:i%2===0?"#FFD32A":"#A29BFE",fontSize:6,marginLeft:3}}>{i%2===0?"▲":"▼"}</span>}
               </div>
-              {showScore&&(
-                <div style={{height:2,background:"#1a1a2e",borderRadius:1,margin:"0 4px"}}>
-                  <div style={{height:"100%",borderRadius:2,background:def.hex,
-                    width:`${(scores[i]/TOTAL)*100}%`,boxShadow:`0 0 4px ${def.hex}`,transition:"width 0.4s"}}/>
-                </div>
-              )}
+              {showScore&&<div style={{height:2,background:T.border,borderRadius:1,margin:"0 3px"}}>
+                <div style={{height:"100%",borderRadius:2,background:def.hex,
+                  width:`${(scores[i]/TOTAL)*100}%`,boxShadow:`0 0 4px ${def.hex}`,transition:"width 0.4s"}}/>
+              </div>}
             </div>
           );
         })}
       </div>
 
       {/* ── Actions ── */}
-      <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+      <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
         <button onClick={endTurn} disabled={isAITurn} style={{
-          padding:"10px 20px",borderRadius:8,cursor:isAITurn?"default":"pointer",
+          padding:"9px 18px",borderRadius:T.pixelated?0:8,cursor:isAITurn?"default":"pointer",
           border:`2px solid ${hasCaptured&&!isAITurn?curHex:hexToRgba(curHex,0.2)}`,
           background:hasCaptured&&!isAITurn?curDim:"transparent",
-          color:hasCaptured&&!isAITurn?curHex:"#555",
-          fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:"bold",letterSpacing:2,
+          color:hasCaptured&&!isAITurn?curHex:T.textFaint,
+          fontFamily:T.font,fontSize:10,fontWeight:"bold",letterSpacing:2,
           boxShadow:hasCaptured&&!isAITurn?`0 0 22px ${curGlow}`:"none",transition:"all 0.2s",
-          opacity:isAITurn?0.4:1}}>
-          END TURN →
-        </button>
+          opacity:isAITurn?0.4:1}}>END TURN →</button>
         <button onClick={triggerEndGame} style={{
-          padding:"10px 12px",borderRadius:8,cursor:"pointer",
-          border:`2px solid ${confirmEnd?"#FF4757":"#333"}`,
+          padding:"9px 10px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+          border:`2px solid ${confirmEnd?"#FF4757":T.btnBorder}`,
           background:confirmEnd?"rgba(255,71,87,0.15)":"transparent",
-          color:confirmEnd?"#FF4757":"#888",
-          fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:1,
+          color:confirmEnd?"#FF4757":T.btnText,fontFamily:T.font,fontSize:9,letterSpacing:1,
           transition:"all 0.2s",whiteSpace:"nowrap"}}>
-          {confirmEnd?"CONFIRM ✕":"END GAME"}
+          {confirmEnd?"CONFIRM ✕":"END"}
         </button>
-        {difficulty!=="easy"&&(
-          <button onClick={()=>setShowScores(s=>!s)} style={{
-            padding:"10px 12px",borderRadius:8,cursor:"pointer",
-            border:`2px solid ${showScores?"#A29BFE":"#333"}`,
-            background:showScores?"rgba(162,155,254,0.15)":"transparent",
-            color:showScores?"#A29BFE":"#888",
-            fontFamily:"'Space Mono',monospace",fontSize:11,
-            transition:"all 0.2s",
-            boxShadow:showScores?"0 0 14px rgba(162,155,254,0.4)":"none"}} title="Peek at scores">👁</button>
-        )}
-        {/* Instructions */}
-        <button onClick={()=>setShowInstructions(difficulty||"general")} style={{
-          padding:"10px 12px",borderRadius:8,cursor:"pointer",
-          border:"1px solid #333",background:"transparent",
-          color:"#888",fontFamily:"'Space Mono',monospace",fontSize:13,
-          transition:"all 0.2s",
-        }} title="How to play">?</button>
-        {/* Music toggle */}
+        {difficulty!=="easy"&&<button onClick={()=>setShowScores(s=>!s)} style={{
+          padding:"9px 10px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+          border:`2px solid ${showScores?T.accentColor:T.btnBorder}`,
+          background:showScores?hexToRgba(T.accentColor,0.15):"transparent",
+          color:showScores?T.accentColor:T.btnText,fontFamily:T.font,fontSize:11,
+          transition:"all 0.2s",boxShadow:showScores?`0 0 14px ${hexToRgba(T.accentColor,0.4)}`:"none"}} title="Peek at scores">👁</button>}
         <button onClick={music.toggleMusic} style={{
-          padding:"10px 12px",borderRadius:8,cursor:"pointer",
-          border:`2px solid ${music.musicOn?"#FFD32A":"#333"}`,
+          padding:"9px 10px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+          border:`2px solid ${music.musicOn?"#FFD32A":T.btnBorder}`,
           background:music.musicOn?"rgba(255,211,42,0.15)":"transparent",
-          color:music.musicOn?"#FFD32A":"#888",
-          fontFamily:"'Space Mono',monospace",fontSize:11,
-          transition:"all 0.2s",
-          boxShadow:music.musicOn?"0 0 14px rgba(255,211,42,0.4)":"none"}} title="Toggle music">♪</button>
-        <GhostButton onClick={resetToMenu} style={{padding:"10px 12px"}}>☰</GhostButton>
+          color:music.musicOn?"#FFD32A":T.btnText,fontFamily:T.font,fontSize:11,
+          transition:"all 0.2s",boxShadow:music.musicOn?"0 0 14px rgba(255,211,42,0.4)":"none"}} title="Music">♪</button>
+        <button onClick={()=>setShowInstructions(difficulty||"general")} style={{
+          padding:"9px 10px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+          border:`1px solid ${T.btnBorder}`,background:"transparent",
+          color:T.btnText,fontFamily:T.font,fontSize:13,transition:"all 0.2s"}} title="How to play">?</button>
+        <GhostButton onClick={resetToMenu} T={T} style={{padding:"9px 10px"}}>☰</GhostButton>
       </div>
 
       {confirmEnd&&<div style={{color:"#FF4757",fontSize:8,letterSpacing:1,flexShrink:0}}>TAP CONFIRM TO END THE GAME EARLY</div>}
-      {clickableCells.size===0&&!confirmEnd&&!isAITurn&&<div style={{color:"#777",fontSize:9,letterSpacing:1,flexShrink:0}}>NO MOVES — END TURN</div>}
+      {clickableCells.size===0&&!confirmEnd&&!isAITurn&&!autoPassActive&&captureCount===0&&(
+        <div style={{color:T.textFaint,fontSize:9,letterSpacing:1,flexShrink:0}}>NO MOVES — END TURN</div>
+      )}
       {showInstructions&&<InstructionsModal topic={showInstructions} onClose={()=>setShowInstructions(false)}/>}
     </div>
   );
 }
 
 /* ─── Mini board ──────────────────────────────────── */
-function MiniBoard({board,playerDefs,takenCells,curColor,onPick,BS,palette}){
+function MiniBoard({board,playerDefs,takenCells,curColor,onPick,BS,palette,T}){
   const[hov,setHov]=useState(null);
   const SIZE=Math.min(typeof window!=="undefined"?window.innerWidth*0.82:280,300);
   return(
     <div onMouseLeave={()=>setHov(null)} style={{
       display:"grid",gridTemplateColumns:`repeat(${BS},1fr)`,gridTemplateRows:`repeat(${BS},1fr)`,
-      gap:2,background:"#111",padding:2,borderRadius:8,
+      gap:2,background:T.gapColor,padding:2,borderRadius:T.pixelated?0:8,
       border:`2px solid ${hexToRgba(curColor.hex,0.6)}`,
       boxShadow:`0 0 24px ${hexToRgba(curColor.hex,0.4)}`,
       width:SIZE,height:SIZE,cursor:"crosshair",flexShrink:0}}>
@@ -1673,12 +1907,13 @@ function MiniBoard({board,playerDefs,takenCells,curColor,onPick,BS,palette}){
           <div key={k} onClick={()=>{if(!taken) onPick(r,c);}} onMouseEnter={()=>setHov(k)}
             style={{background:existingDef>=0?playerDefs[existingDef].hex:palette[board[r][c]].hex,
               position:"relative",cursor:taken?"not-allowed":"crosshair",
-              filter:existingDef>=0?"none":"saturate(0.28) brightness(0.72)"}}>
+              filter:existingDef>=0?"none":"saturate(0.28) brightness(0.72)",
+              borderRadius:T.pixelated?0:T.cellRadius}}>
             {existingDef>=0&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
               <div style={{width:4,height:4,borderRadius:"50%",background:"white",boxShadow:"0 0 3px black"}}/>
             </div>}
             {!taken&&isHov&&<div style={{position:"absolute",inset:0,background:hexToRgba(curColor.hex,0.7),
-              border:`2px solid ${curColor.hex}`,boxSizing:"border-box"}}/>}
+              border:`2px solid ${curColor.hex}`,boxSizing:"border-box",borderRadius:T.pixelated?0:T.cellRadius}}/>}
           </div>
         );
       })}
@@ -1686,249 +1921,76 @@ function MiniBoard({board,playerDefs,takenCells,curColor,onPick,BS,palette}){
   );
 }
 
-/* ─── Instructions modal ────────────────────────────── */
-const INSTRUCTIONS = {
-  general: {
-    title: "HOW TO PLAY",
-    icon: "🎮",
-    sections: [
-      {
-        heading: "GOAL",
-        body: "Capture more cells than your opponent by the end of the game. The player with the most cells wins when rounds run out — or you can call the game early."
-      },
-      {
-        heading: "TAKING A TURN",
-        body: "Tap any neutral (muted) cell that borders your territory. The whole connected group of the same colour joins you in one move. Hover first to preview exactly what you'd capture and how many cells."
-      },
-      {
-        heading: "YOUR COLOUR ANYWHERE",
-        body: "Any neutral cell that matches your team colour is clickable from anywhere on the board — not just next to your territory. Use this to grab a foothold on the other side of the grid."
-      },
-      {
-        heading: "AUTO-JOINS",
-        body: "At the start of your turn, any neutral cells of your own colour that directly touch your territory are claimed automatically for free."
-      },
-      {
-        heading: "ENCLOSURES",
-        body: "If you fully surround a group of neutral cells against a wall or your own territory, they are automatically claimed — as long as they contain no other player's colour (they could still reach in)."
-      },
-      {
-        heading: "RE-CLICK TO CHANGE",
-        body: "Made a bad move? Before hitting End Turn, tap any other group to replace your capture with a different one."
-      },
-      {
-        heading: "END TURN",
-        body: "When you're happy with your capture, tap End Turn. You can also pass without capturing if you want to skip."
-      },
-    ]
-  },
-  easy: {
-    title: "EASY MODE",
-    icon: "🟢",
-    sections: [
-      { heading: "BOARD", body: "Pixels come in blobs of 2–6 cells. No isolated single pixels. Groups are easier to see and plan around." },
-      { heading: "CASCADE", body: "When you capture a colour group, ALL other patches of that same colour touching any of your territory also join automatically. One click can grab a lot." },
-      { heading: "COLOUR LEGEND", body: "A row of colour swatches appears below the board. Tap one to highlight all cells of that colour and dim everything else — great for planning your next move." },
-      { heading: "SCORES", body: "Full scores and progress bars are always visible." },
-    ]
-  },
-  normal: {
-    title: "NORMAL MODE",
-    icon: "🟡",
-    sections: [
-      { heading: "BOARD", body: "Pixels come in blobs of 2–6 cells. No isolated single pixels." },
-      { heading: "NO CASCADE", body: "Only the connected group you click joins you. Disconnected patches of the same colour elsewhere on the board are NOT swept in. Plan each click carefully." },
-      { heading: "HIDDEN SCORES", body: "Scores are hidden during play — you can only see rough block bars. Use the 👁 button to peek at exact numbers when you want to check." },
-    ]
-  },
-  hard: {
-    title: "HARD MODE",
-    icon: "🔴",
-    sections: [
-      { heading: "BOARD", body: "Fully random pixel placement. Cells can be any size group including single isolated pixels. Much harder to predict what you'll capture." },
-      { heading: "CASCADE", body: "Same as Easy — capturing a colour sweeps in all same-colour patches touching your territory." },
-      { heading: "HIDDEN SCORES", body: "Scores hidden. Use 👁 to peek." },
-    ]
-  },
-  teammode: {
-    title: "TEAM MODE (2v2)",
-    icon: "⚔️",
-    sections: [
-      { heading: "TEAMS", body: "Players 1 & 3 form one team (▲ Gold), Players 2 & 4 form the other (▼ Violet). You each still play individually on your own turn." },
-      { heading: "WINNING", body: "Your team wins when the two of you combined hold more territory than the opposing pair. Coordinate your expansion to fill areas your teammate can't reach." },
-      { heading: "STRATEGY", body: "Try to expand towards your teammate to create a connected wall that traps the opponents. Your teammate's territory counts as friendly for enclosure purposes." },
-    ]
-  },
-  vscomputer: {
-    title: "VS COMPUTER",
-    icon: "🤖",
-    sections: [
-      { heading: "RECRUIT", body: "The computer picks a random legal move each turn. Good for learning the game." },
-      { heading: "VETERAN", body: "The computer always picks whichever cell captures the most cells that turn. Consistent but predictable — try to block its best move." },
-      { heading: "MASTER", body: "The computer scores its top 5 moves, then simulates your best possible reply to each, and picks the move that maximises its gain while minimising yours. Much harder to beat." },
-      { heading: "COMPUTER TURN", body: "When it's the computer's turn the board dims and a ⚙ spins in the banner. It thinks for about a second then plays automatically." },
-    ]
-  },
-};
-
-function InstructionsModal({topic, onClose}){
-  const data = INSTRUCTIONS[topic] || INSTRUCTIONS.general;
-  const[section,setSection] = useState(0);
-
-  return(
-    <div style={{
-      position:"fixed",inset:0,zIndex:1000,
-      background:"rgba(0,0,0,0.85)",
-      display:"flex",alignItems:"center",justifyContent:"center",
-      padding:"16px",
-      fontFamily:"'Space Mono',monospace",
-    }} onClick={onClose}>
-      <div style={{
-        background:"#0d0d1a",border:"1px solid #2a2a4a",borderRadius:16,
-        width:"100%",maxWidth:340,maxHeight:"80vh",
-        display:"flex",flexDirection:"column",
-        boxShadow:"0 0 60px rgba(0,0,0,0.9)",
-        overflow:"hidden",
-      }} onClick={e=>e.stopPropagation()}>
-        {/* Header */}
-        <div style={{
-          display:"flex",alignItems:"center",gap:10,
-          padding:"14px 16px",borderBottom:"1px solid #1a1a2e",flexShrink:0,
-        }}>
-          <span style={{fontSize:24}}>{data.icon}</span>
-          <span style={{flex:1,fontSize:11,fontWeight:"bold",letterSpacing:3,color:"#eee"}}>{data.title}</span>
-          <button onClick={onClose} style={{
-            width:28,height:28,borderRadius:"50%",cursor:"pointer",border:"1px solid #333",
-            background:"transparent",color:"#aaa",fontSize:14,fontFamily:"'Space Mono',monospace",
-            display:"flex",alignItems:"center",justifyContent:"center",
-          }}>✕</button>
-        </div>
-
-        {/* Section pills */}
-        {data.sections.length > 1 && (
-          <div style={{
-            display:"flex",gap:4,padding:"10px 12px",overflowX:"auto",
-            borderBottom:"1px solid #1a1a2e",flexShrink:0,
-          }}>
-            {data.sections.map((s,i)=>(
-              <button key={i} onClick={()=>setSection(i)} style={{
-                flexShrink:0,padding:"4px 10px",borderRadius:20,cursor:"pointer",
-                border:`1px solid ${i===section?"#A29BFE":"#2a2a4a"}`,
-                background:i===section?"rgba(162,155,254,0.2)":"transparent",
-                color:i===section?"#A29BFE":"#666",
-                fontFamily:"'Space Mono',monospace",fontSize:7,letterSpacing:1,
-                transition:"all 0.15s",
-              }}>{s.heading}</button>
-            ))}
-          </div>
-        )}
-
-        {/* Content */}
-        <div style={{flex:1,overflowY:"auto",padding:"20px 16px"}}>
-          <div style={{fontSize:10,fontWeight:"bold",letterSpacing:2,color:"#A29BFE",marginBottom:10}}>
-            {data.sections[section].heading}
-          </div>
-          <div style={{fontSize:11,color:"#ccc",lineHeight:1.9,letterSpacing:0.5}}>
-            {data.sections[section].body}
-          </div>
-        </div>
-
-        {/* Nav arrows */}
-        <div style={{
-          display:"flex",justifyContent:"space-between",alignItems:"center",
-          padding:"10px 16px",borderTop:"1px solid #1a1a2e",flexShrink:0,
-        }}>
-          <button onClick={()=>setSection(s=>Math.max(0,s-1))} disabled={section===0} style={{
-            padding:"6px 14px",borderRadius:8,cursor:section===0?"default":"pointer",
-            border:"1px solid #2a2a4a",background:"transparent",
-            color:section===0?"#2a2a4a":"#aaa",fontFamily:"'Space Mono',monospace",fontSize:10,
-          }}>← PREV</button>
-          <span style={{color:"#444",fontSize:9}}>{section+1} / {data.sections.length}</span>
-          <button onClick={()=>setSection(s=>Math.min(data.sections.length-1,s+1))}
-            disabled={section===data.sections.length-1} style={{
-            padding:"6px 14px",borderRadius:8,
-            cursor:section===data.sections.length-1?"default":"pointer",
-            border:"1px solid #2a2a4a",background:"transparent",
-            color:section===data.sections.length-1?"#2a2a4a":"#aaa",
-            fontFamily:"'Space Mono',monospace",fontSize:10,
-          }}>NEXT →</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── UI atoms ─────────────────────────────────────── */
-function Shell({children,wide=false}){
+function Shell({children,wide=false,T}){
   return(
-    <div style={{minHeight:"100vh",background:"#080812",display:"flex",flexDirection:"column",
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",
       alignItems:"center",justifyContent:"center",padding:"24px 16px",
-      fontFamily:"'Space Mono',monospace",color:"white",boxSizing:"border-box",overflow:"hidden"}}>
+      fontFamily:T.font,color:T.text,boxSizing:"border-box",overflow:"hidden"}}>
       <style>{GLOBAL_CSS}</style>
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",
-        background:"#0d0d1a",border:"1px solid #2a2a4a",borderRadius:16,
-        padding:"28px 20px",width:"100%",maxWidth:wide?340:320,
-        boxShadow:"0 0 60px rgba(0,0,0,0.8)"}}>
+        background:T.cardBg,border:`1px solid ${T.border}`,
+        borderRadius:T.pixelated?0:16,padding:"28px 20px",width:"100%",maxWidth:wide?340:320,
+        boxShadow:T.pixelated?`4px 4px 0 ${T.border}`:"0 0 60px rgba(0,0,0,0.8)"}}>
         {children}
       </div>
     </div>
   );
 }
-function Logo({name}){
+function Logo({name,T}){
   const parts=name.split(" ");
   return(
-    <div style={{fontSize:34,fontWeight:"bold",letterSpacing:6,lineHeight:1.1,
+    <div style={{fontSize:T.pixelated?28:34,fontWeight:"bold",letterSpacing:6,lineHeight:1.1,
       textAlign:"center",marginBottom:6,
-      background:"linear-gradient(135deg,#FF4757,#5352ED,#2ED573,#FFD32A)",
+      background:T.pixelated?T.text:"linear-gradient(135deg,#FF4757,#5352ED,#2ED573,#FFD32A)",
       WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
       {parts[0]}<br/>{parts.slice(1).join(" ")||""}
     </div>
   );
 }
-function Dim({children}){return <div style={{fontSize:8,letterSpacing:4,color:"#aaa",marginBottom:28}}>{children}</div>;}
-function SLabel({children}){return <div style={{fontSize:9,letterSpacing:3,color:"#ddd",marginBottom:16}}>{children}</div>;}
-function Badge({color,children}){
+function Dim({children,T}){return <div style={{fontSize:8,letterSpacing:4,color:T.textDim,marginBottom:24}}>{children}</div>;}
+function SLabel({children,T}){return <div style={{fontSize:9,letterSpacing:3,color:T.text,marginBottom:14}}>{children}</div>;}
+function Badge({color,children,T}){
   return(
-    <span style={{fontSize:7,letterSpacing:2,color,padding:"2px 7px",borderRadius:10,
+    <span style={{fontSize:7,letterSpacing:2,color,padding:"2px 7px",
+      borderRadius:T?.pixelated?0:10,
       border:`1px solid ${hexToRgba(color,0.5)}`,background:hexToRgba(color,0.12),whiteSpace:"nowrap"}}>
       {children}
     </span>
   );
 }
-function NumBtn({onClick,children}){
+function NumBtn({onClick,children,T}){
   const[h,setH]=useState(false);
   return(
     <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-      style={{width:80,height:80,borderRadius:12,cursor:"pointer",
-        border:`2px solid ${h?"#A29BFE":"#2a2a4a"}`,background:"transparent",
-        color:h?"#A29BFE":"#ddd",fontSize:32,fontWeight:"bold",
-        fontFamily:"'Space Mono',monospace",
-        boxShadow:h?"0 0 20px rgba(162,155,254,0.45)":"none",transition:"all 0.2s"}}>{children}</button>
+      style={{width:80,height:80,borderRadius:T.pixelated?0:12,cursor:"pointer",
+        border:`2px solid ${h?T.accentColor:T.border}`,background:"transparent",
+        color:h?T.accentColor:T.textDim,fontSize:32,fontWeight:"bold",fontFamily:T.font,
+        boxShadow:h?`0 0 20px ${hexToRgba(T.accentColor,0.45)}`:"none",transition:"all 0.2s"}}>{children}</button>
   );
 }
-function DiffBtn({color,label,onClick,children,noMargin=false}){
+function DiffBtn({color,label,onClick,children,noMargin=false,T}){
   const[h,setH]=useState(false);
   return(
     <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-      style={{width:"100%",padding:"16px 16px",borderRadius:10,cursor:"pointer",
+      style={{width:"100%",padding:"14px 16px",borderRadius:T?.pixelated?0:10,cursor:"pointer",
         marginBottom:noMargin?0:10,textAlign:"left",border:`2px solid ${color}`,
         background:h?hexToRgba(color,0.18):hexToRgba(color,0.08),
         boxShadow:h?`0 0 24px ${hexToRgba(color,0.35)}`:"none",
-        transition:"all 0.2s",fontFamily:"'Space Mono',monospace"}}>
-      <div style={{fontSize:13,fontWeight:"bold",letterSpacing:3,color,marginBottom:5,
-        textShadow:`0 0 12px ${hexToRgba(color,0.5)}`}}>{label}</div>
+        transition:"all 0.2s",fontFamily:T?.font||"monospace"}}>
+      <div style={{fontSize:12,fontWeight:"bold",letterSpacing:3,color,marginBottom:4,textShadow:`0 0 12px ${hexToRgba(color,0.5)}`}}>{label}</div>
       <div style={{fontSize:9,color,opacity:0.9,letterSpacing:1,lineHeight:1.8}}>{children}</div>
     </button>
   );
 }
-function ColorBtn({pc,taken,onClick}){
+function ColorBtn({pc,taken,onClick,T}){
   const[h,setH]=useState(false);
   return(
     <button onClick={onClick} disabled={taken} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-      style={{height:56,borderRadius:10,cursor:taken?"not-allowed":"pointer",
-        border:`2px solid ${taken?"#222":h?pc.hex:hexToRgba(pc.hex,0.5)}`,
-        background:taken?"#0a0a16":h?hexToRgba(pc.hex,0.25):hexToRgba(pc.hex,0.12),
-        opacity:taken?0.25:1,transition:"all 0.15s",
+      style={{height:56,borderRadius:T?.pixelated?0:10,cursor:taken?"not-allowed":"pointer",
+        border:`2px solid ${taken?"#111":h?pc.hex:hexToRgba(pc.hex,0.4)}`,
+        background:taken?"transparent":h?hexToRgba(pc.hex,0.25):hexToRgba(pc.hex,0.12),
+        opacity:taken?0.2:1,transition:"all 0.15s",
         boxShadow:h&&!taken?`0 0 18px ${hexToRgba(pc.hex,0.55)}`:"none"}}>
       <div style={{width:22,height:22,borderRadius:"50%",background:taken?"#1a1a2e":pc.hex,
         margin:"0 auto 4px",boxShadow:taken?"none":`0 0 10px ${hexToRgba(pc.hex,0.7)}`}}/>
@@ -1946,11 +2008,11 @@ function GlowButton({hex,onClick,children}){
     </button>
   );
 }
-function GhostButton({onClick,children,style={}}){
+function GhostButton({onClick,children,style={},T}){
   return(
-    <button onClick={onClick} style={{padding:"11px 14px",borderRadius:8,cursor:"pointer",
-      border:"1px solid #333",background:"transparent",
-      color:"#aaa",fontFamily:"'Space Mono',monospace",fontSize:12,...style}}>
+    <button onClick={onClick} style={{padding:"9px 12px",borderRadius:T?.pixelated?0:8,cursor:"pointer",
+      border:`1px solid ${T?.btnBorder||"#333"}`,background:"transparent",
+      color:T?.btnText||"#aaa",fontFamily:T?.font||"monospace",fontSize:11,...style}}>
       {children}
     </button>
   );
@@ -1959,17 +2021,20 @@ function GhostButton({onClick,children,style={}}){
 const GLOBAL_CSS=`
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  @keyframes ring-pulse    { 0% { transform:scale(1);   opacity:0.7; } 70% { transform:scale(2.2); opacity:0; } 100% { transform:scale(2.2); opacity:0; } }
+  @keyframes ring-pulse    { 0% { transform:scale(1); opacity:0.7; } 70% { transform:scale(2.2); opacity:0; } 100% { transform:scale(2.2); opacity:0; } }
   @keyframes cell-flicker  { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
-  @keyframes flash-burst   { 0% { opacity:0.85; } 100% { opacity:0; } }
+  @keyframes flash-ripple  { 0% { opacity:0.9; } 100% { opacity:0; } }
   @keyframes enclosed-burst{ 0% { opacity:0; } 20% { opacity:0.9; } 100% { opacity:0; } }
   @keyframes auto-burst    { 0% { opacity:0; } 15% { opacity:0.8; } 100% { opacity:0; } }
   @keyframes glow-pulse    { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
   @keyframes ai-spin       { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @keyframes terr-pulse    { 0%,100% { opacity:0.5; } 50% { opacity:1; } }
+  @keyframes combo-pop     { 0% { transform:translate(-50%,-50%) scale(0.5); opacity:0; } 30% { transform:translate(-50%,-50%) scale(1.2); opacity:1; } 70% { transform:translate(-50%,-50%) scale(1); opacity:1; } 100% { transform:translate(-50%,-50%) scale(1.1); opacity:0; } }
   .ring-pulse     { animation:ring-pulse     1.5s ease-out    infinite; }
   .cell-pulse     { animation:cell-flicker   0.9s ease-in-out infinite; }
-  .flash-burst    { animation:flash-burst    0.7s ease        forwards; }
   .enclosed-burst { animation:enclosed-burst 1.0s ease        forwards; }
   .auto-burst     { animation:auto-burst     0.8s ease        forwards; }
   .ai-thinking    { animation:ai-spin        1s   linear      infinite; display:inline-block; }
+  .terr-border    { animation:terr-pulse     2s   ease-in-out infinite; }
+  .combo-pop      { animation:combo-pop      1.8s ease        forwards; }
 `;
