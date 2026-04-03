@@ -64,6 +64,7 @@ const DEFAULT_CONFIG = {
     small: {bs:12,label:"Small", sub:"12 × 12"},
     medium:{bs:17,label:"Medium",sub:"17 × 17"},
     large: {bs:22,label:"Large", sub:"22 × 22"},
+    huge:  {bs:30,label:"Huge",  sub:"30 × 30"},
   },
   victoryText:{
     conquest:    {title:"CONQUEST COMPLETE",   sub:"Every cell is yours.",  icon:"🏆"},
@@ -333,9 +334,10 @@ function checkMathematicalVictory(ownership,numPlayers,teamMode,BS){
    AI LOGIC
 ════════════════════════════════════════════════════════ */
 const AI_LEVELS={
-  recruit:{key:"recruit",label:"Recruit",color:"#2ED573",desc:"Makes random moves"},
-  veteran:{key:"veteran",label:"Veteran",color:"#FFD32A",desc:"Picks the biggest group available"},
-  master: {key:"master", label:"Master", color:"#FF4757",desc:"Maximises gain and blocks your best move"},
+  recruit:    {key:"recruit",    label:"Recruit",    color:"#2ED573",desc:"Makes random moves"},
+  veteran:    {key:"veteran",    label:"Veteran",    color:"#FFD32A",desc:"Picks the biggest group available"},
+  master:     {key:"master",     label:"Master",     color:"#FF4757",desc:"Maximises gain and blocks your best move"},
+  grandmaster:{key:"grandmaster",label:"Grandmaster",color:"#CC00CC",desc:"Looks two moves ahead — simulates your best reply and its own counter. Not recommended on Huge grid."},
 };
 function scoreMove(board,ownership,pid,r,c,cascade,playerDefs,palette,numPlayers,BS){
   const doC=cascade==="full"?cascadeCapture:captureGroup;
@@ -356,19 +358,37 @@ function getAIMove(board,ownership,pid,playerDefs,palette,BS,cascadeMode,aiLevel
     return{r,c,gained,afterEnc};
   }).sort((a,b)=>b.gained-a.gained);
   if(aiLevel==="veteran") return[scored[0].r,scored[0].c];
-  const top=scored.slice(0,Math.min(5,scored.length));
+  const topN=aiLevel==="grandmaster"?Math.min(10,scored.length):Math.min(5,scored.length);
+  const top=scored.slice(0,topN);
   const humanIdx=playerDefs.findIndex((d,i)=>i!==pid&&!d.isAI);
   if(humanIdx<0) return[top[0].r,top[0].c];
   let bestMove=top[0],bestNet=-Infinity;
   for(const move of top){
+    // Simulate human's best reply
     const hc=getClickableCellsForPlayer(board,move.afterEnc,humanIdx,playerDefs,palette,BS);
-    let maxHG=0;
+    let maxHG=0,humanBestBoard=move.afterEnc;
     for(const hk of hc){
       const hr=Math.floor(hk/BS),hcc=hk%BS;
-      const{gained}=scoreMove(board,move.afterEnc,humanIdx,hr,hcc,cascadeMode,playerDefs,palette,numPlayers,BS);
-      if(gained>maxHG) maxHG=gained;if(maxHG>30) break;
+      const{gained,afterEnc:hAfter}=scoreMove(board,move.afterEnc,humanIdx,hr,hcc,cascadeMode,playerDefs,palette,numPlayers,BS);
+      if(gained>maxHG){maxHG=gained;humanBestBoard=hAfter;}
+      if(maxHG>40) break;
     }
-    const net=move.gained*1.5-maxHG;
+    let net=move.gained*1.5-maxHG;
+
+    // Grandmaster: also simulate AI's best counter-reply after human's best move
+    if(aiLevel==="grandmaster"&&humanBestBoard!==move.afterEnc){
+      const ac2=getClickableCellsForPlayer(board,humanBestBoard,pid,playerDefs,palette,BS);
+      let bestCounter=0;
+      for(const ak of ac2){
+        const ar=Math.floor(ak/BS),acc=ak%BS;
+        const{gained:ag}=scoreMove(board,humanBestBoard,pid,ar,acc,cascadeMode,playerDefs,palette,numPlayers,BS);
+        if(ag>bestCounter) bestCounter=ag;
+        if(bestCounter>30) break;
+      }
+      // Weight: initial gain + discounted counter - human reply
+      net=move.gained*1.5+bestCounter*0.6-maxHG*1.2;
+    }
+
     if(net>bestNet){bestNet=net;bestMove=move;}
   }
   return[bestMove.r,bestMove.c];
@@ -500,7 +520,8 @@ const INSTRUCTIONS={
     {heading:"RECRUIT",body:"Picks random legal moves. Good for learning."},
     {heading:"VETERAN",body:"Always picks whichever cell captures the most cells that turn. Consistent but predictable."},
     {heading:"MASTER",body:"Scores its top 5 moves then simulates your best possible reply, picking what maximises its gain while minimising yours. Hard to beat."},
-    {heading:"START POSITION",body:"Veteran and Master start inside their colour's biggest group on the board — giving them a strong opening automatically."},
+    {heading:"GRANDMASTER",body:"Looks two moves ahead — simulates your best reply to each of its top 10 moves, then simulates its own best counter-reply to your move, and picks the line that comes out best overall. Very hard to beat."},
+    {heading:"START POSITION",body:"Veteran, Master and Grandmaster start inside their colour's biggest group on the board — giving them a strong opening automatically."},
   ]},
   teammode:{title:"TEAM MODE (2v2)",icon:"⚔️",sections:[
     {heading:"TEAMS",body:"Players 1 & 3 form Team Gold (▲). Players 2 & 4 form Team Violet (▼). Each plays their own turn individually."},
