@@ -11,14 +11,68 @@ const THEMES = {
     gapColor:"#111", cellRadius:0, font:"'Space Mono',monospace",
     accentColor:"#A29BFE", pixelated:false,
     btnBorder:"#333", btnText:"#aaa",
+    neutralFilter:"saturate(0.55) brightness(0.85)",
+    ownedFilter:"saturate(1.4) brightness(1.1)",
+
+    boardColours:[
+      {hex:"#FF3333",name:"Red"},
+      {hex:"#FF8800",name:"Orange"},
+      {hex:"#FFE600",name:"Yellow"},
+      {hex:"#00EE00",name:"Green"},
+      {hex:"#00AACC",name:"Teal"},
+      {hex:"#1A8CFF",name:"Blue"},
+      {hex:"#8833FF",name:"Purple"},
+      {hex:"#FF44AA",name:"Pink"},
+      {hex:"#EEEEEE",name:"White"},
+      {hex:"#FFAA00",name:"Amber"},
+      {hex:"#999999",name:"Grey"},
+      {hex:"#BBFF00",name:"Lime"},
+    ],
+    teams:[
+      {hex:"#FF3333",name:"Scarlet Fury"},
+      {hex:"#1A8CFF",name:"Azure Knights"},
+      {hex:"#FFE600",name:"Yellow Thunder"},
+      {hex:"#00EE00",name:"Neon Vipers"},
+      {hex:"#FF44AA",name:"Pink Panthers"},
+      {hex:"#00AACC",name:"Teal Storm"},
+      {hex:"#8833FF",name:"Amethyst Power"},
+      {hex:"#FF8800",name:"Orange Tigers"},
+    ],
   },
   pastel: {
     name:"Pastel Soft",
     bg:"#F5F0FF", cardBg:"#FFFFFF", border:"#DDD0F0",
-    text:"#3D2B5E", textDim:"#9080B0", textFaint:"#C8B8E0",
-    gapColor:"#E8D8F8", cellRadius:3, font:"'Space Mono',monospace",
+    text:"#3D2B5E", textDim:"#7060A0", textFaint:"#C8B8E0",
+    gapColor:"#EAE0F5", cellRadius:4, font:"'Space Mono',monospace",
     accentColor:"#9B70D0", pixelated:false,
     btnBorder:"#C8B0E8", btnText:"#6B5090",
+    neutralFilter:"saturate(0.5) brightness(0.92)",
+    ownedFilter:"saturate(1.1) brightness(1.0)",
+
+    boardColours:[
+      {hex:"#E87070",name:"Rose"},
+      {hex:"#E8A060",name:"Peach"},
+      {hex:"#E8D870",name:"Butter"},
+      {hex:"#80C880",name:"Sage"},
+      {hex:"#70C0D8",name:"Sky"},
+      {hex:"#7898E8",name:"Periwinkle"},
+      {hex:"#A878D8",name:"Lavender"},
+      {hex:"#E878B0",name:"Blush"},
+      {hex:"#F0F0F0",name:"Cream"},
+      {hex:"#E8B860",name:"Sand"},
+      {hex:"#B8B8C8",name:"Pebble"},
+      {hex:"#A8D870",name:"Celery"},
+    ],
+    teams:[
+      {hex:"#E87070",name:"Rose"},
+      {hex:"#7898E8",name:"Periwinkle"},
+      {hex:"#E8D870",name:"Butter"},
+      {hex:"#80C880",name:"Sage"},
+      {hex:"#E878B0",name:"Blush"},
+      {hex:"#70C0D8",name:"Sky"},
+      {hex:"#A878D8",name:"Lavender"},
+      {hex:"#E8A060",name:"Peach"},
+    ],
   },
   retro: {
     name:"Retro 8-Bit",
@@ -27,6 +81,33 @@ const THEMES = {
     gapColor:"#000000", cellRadius:0, font:"'Space Mono',monospace",
     accentColor:"#00FF41", pixelated:true,
     btnBorder:"#00AA22", btnText:"#00CC33",
+    neutralFilter:"saturate(0.4) brightness(0.6)",
+    ownedFilter:"saturate(1.0) brightness(1.0)",
+
+    boardColours:[
+      {hex:"#FF0000",name:"Red"},
+      {hex:"#FF6600",name:"Orange"},
+      {hex:"#FFFF00",name:"Yellow"},
+      {hex:"#00FF00",name:"Green"},
+      {hex:"#00FFFF",name:"Cyan"},
+      {hex:"#0088FF",name:"Blue"},
+      {hex:"#8800FF",name:"Purple"},
+      {hex:"#FF00FF",name:"Magenta"},
+      {hex:"#FFFFFF",name:"White"},
+      {hex:"#FFAA00",name:"Gold"},
+      {hex:"#AAAAAA",name:"Silver"},
+      {hex:"#FF0088",name:"Hot Pink"},
+    ],
+    teams:[
+      {hex:"#FF0000",name:"Red Squad"},
+      {hex:"#0088FF",name:"Blue Squad"},
+      {hex:"#FFFF00",name:"Yellow Squad"},
+      {hex:"#00FF00",name:"Green Squad"},
+      {hex:"#FF00FF",name:"Magenta Squad"},
+      {hex:"#00FFFF",name:"Cyan Squad"},
+      {hex:"#8800FF",name:"Purple Squad"},
+      {hex:"#FF6600",name:"Orange Squad"},
+    ],
   },
 };
 
@@ -37,18 +118,28 @@ const DEFAULT_CONFIG = {
   gameName:"PIXEL GO", tagline:"COLOUR TERRITORY BATTLE",
   maxRounds:0, theme:"neon",
   boardColours:[
-    {hex:"#E8192C",name:"Red"},{hex:"#FF7500",name:"Orange"},
-    {hex:"#F5D000",name:"Yellow"},{hex:"#41C900",name:"Lime"},
-    {hex:"#00A86B",name:"Jade"},{hex:"#00C8C8",name:"Teal"},
-    {hex:"#0078FF",name:"Blue"},{hex:"#7B2FFF",name:"Violet"},
-    {hex:"#CC00CC",name:"Magenta"},{hex:"#FF2B8A",name:"Pink"},
-    {hex:"#A0522D",name:"Sienna"},{hex:"#9E9E9E",name:"Grey"},
+    {hex:"#FF3333",name:"Red"},
+    {hex:"#FF8800",name:"Orange"},
+    {hex:"#FFE600",name:"Yellow"},
+    {hex:"#00EE00",name:"Green"},
+    {hex:"#00AACC",name:"Teal"},
+    {hex:"#1A8CFF",name:"Blue"},
+    {hex:"#8833FF",name:"Purple"},
+    {hex:"#FF44AA",name:"Pink"},
+    {hex:"#EEEEEE",name:"White"},
+    {hex:"#FFAA00",name:"Amber"},
+    {hex:"#999999",name:"Grey"},
+    {hex:"#BBFF00",name:"Lime"},
   ],
   teams:[
-    {hex:"#E8192C",name:"Scarlet Fury"},{hex:"#FF7500",name:"Orange Tigers"},
-    {hex:"#F5D000",name:"Yellow Thunder"},{hex:"#41C900",name:"Neon Vipers"},
-    {hex:"#00A86B",name:"Jade Dragons"},{hex:"#00C8C8",name:"Cyan Storm"},
-    {hex:"#0078FF",name:"Azure Knights"},{hex:"#7B2FFF",name:"Amethyst Power"},
+    {hex:"#FF3333",name:"Scarlet Fury"},
+    {hex:"#1A8CFF",name:"Azure Knights"},
+    {hex:"#FFE600",name:"Yellow Thunder"},
+    {hex:"#00EE00",name:"Neon Vipers"},
+    {hex:"#FF44AA",name:"Pink Panthers"},
+    {hex:"#00AACC",name:"Teal Storm"},
+    {hex:"#8833FF",name:"Amethyst Power"},
+    {hex:"#FF8800",name:"Orange Tigers"},
   ],
   difficulties:{
     easy:  {label:"Easy",  color:"#2ED573",board:"grouped",cascade:"full",
@@ -117,7 +208,7 @@ function getTodayStr(){
   const d=new Date();
   return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
 }
-// Simple seeded LCG random
+
 function seededRand(seed){
   let s=seed>>>0;
   return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};
@@ -339,24 +430,103 @@ const AI_LEVELS={
   master:     {key:"master",     label:"Master",     color:"#FF4757",desc:"Maximises gain and blocks your best move"},
   grandmaster:{key:"grandmaster",label:"Grandmaster",color:"#CC00CC",desc:"Looks two moves ahead — simulates your best reply and its own counter. Not recommended on Huge grid."},
 };
-function scoreMove(board,ownership,pid,r,c,cascade,playerDefs,palette,numPlayers,BS){
+/* ── Territorial evaluation helpers ── */
+
+
+
+
+function countReachableNeutrals(board,ownership,pid,BS){
+  const visited=new Set();
+  const q=[];
+
+  for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
+    if(ownership[r][c]!==pid) continue;
+    for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){
+      if(nr<0||nr>=BS||nc<0||nc>=BS) continue;
+      const k=nr*BS+nc;
+      if(ownership[nr][nc]===-1&&!visited.has(k)){visited.add(k);q.push([nr,nc]);}
+    }
+  }
+
+  let head=0;
+  while(head<q.length){
+    const[r,c]=q[head++];
+    for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){
+      if(nr<0||nr>=BS||nc<0||nc>=BS) continue;
+      const k=nr*BS+nc;
+      if(ownership[nr][nc]===-1&&!visited.has(k)){visited.add(k);q.push([nr,nc]);}
+    }
+  }
+  return visited.size;
+}
+
+
+
+function countNearlyEnclosed(ownership,pid,BS){
+  let count=0;
+  for(let r=0;r<BS;r++) for(let c=0;c<BS;c++){
+    if(ownership[r][c]!==-1) continue;
+    let friendlyOrWall=0;
+    for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){
+      if(nr<0||nr>=BS||nc<0||nc>=BS) friendlyOrWall++;
+      else if(ownership[nr][nc]===pid) friendlyOrWall++;
+    }
+    if(friendlyOrWall>=3) count++;
+  }
+  return count;
+}
+
+
+
+function scoreMove(board,ownership,pid,r,c,cascade,playerDefs,palette,numPlayers,BS,deep=false){
   const doC=cascade==="full"?cascadeCapture:captureGroup;
   const{newOwnership:after}=doC(board,ownership,pid,r,c,BS);
   const{newOwnership:afterEnc}=applyEnclosures(board,after,playerDefs,numPlayers,palette,BS);
+
+
   let gained=0;
   for(let r2=0;r2<BS;r2++) for(let c2=0;c2<BS;c2++)
     if(afterEnc[r2][c2]===pid&&ownership[r2][c2]===-1) gained++;
-  return{gained,afterEnc};
+
+
+
+  let territorial=0;
+  if(deep){
+
+    const myReach=countReachableNeutrals(board,afterEnc,pid,BS);
+
+
+    let opponentReachBefore=0,opponentReachAfter=0;
+    for(let i=0;i<numPlayers;i++){
+      if(i===pid) continue;
+      opponentReachBefore+=countReachableNeutrals(board,ownership,i,BS);
+      opponentReachAfter +=countReachableNeutrals(board,afterEnc,i,BS);
+    }
+    const denied=opponentReachBefore-opponentReachAfter;
+
+
+    const nearEnc=countNearlyEnclosed(afterEnc,pid,BS);
+
+
+    territorial=denied*0.4+nearEnc*0.5;
+  }
+
+  return{gained,territorial,afterEnc};
 }
 function getAIMove(board,ownership,pid,playerDefs,palette,BS,cascadeMode,aiLevel,numPlayers){
   const cells=getClickableCellsForPlayer(board,ownership,pid,playerDefs,palette,BS);
   const candidates=[...cells].map(k=>[Math.floor(k/BS),k%BS]);
   if(!candidates.length) return null;
   if(aiLevel==="recruit") return candidates[Math.floor(Math.random()*candidates.length)];
+
+
+  const useDeep=aiLevel==="master"||aiLevel==="grandmaster";
   const scored=candidates.map(([r,c])=>{
-    const{gained,afterEnc}=scoreMove(board,ownership,pid,r,c,cascadeMode,playerDefs,palette,numPlayers,BS);
-    return{r,c,gained,afterEnc};
-  }).sort((a,b)=>b.gained-a.gained);
+    const{gained,territorial,afterEnc}=scoreMove(board,ownership,pid,r,c,cascadeMode,playerDefs,palette,numPlayers,BS,useDeep);
+
+    const total=gained+territorial;
+    return{r,c,gained,territorial,total,afterEnc};
+  }).sort((a,b)=>b.total-a.total);
   if(aiLevel==="veteran") return[scored[0].r,scored[0].c];
   const topN=aiLevel==="grandmaster"?Math.min(10,scored.length):Math.min(5,scored.length);
   const top=scored.slice(0,topN);
@@ -364,29 +534,32 @@ function getAIMove(board,ownership,pid,playerDefs,palette,BS,cascadeMode,aiLevel
   if(humanIdx<0) return[top[0].r,top[0].c];
   let bestMove=top[0],bestNet=-Infinity;
   for(const move of top){
-    // Simulate human's best reply
+
     const hc=getClickableCellsForPlayer(board,move.afterEnc,humanIdx,playerDefs,palette,BS);
-    let maxHG=0,humanBestBoard=move.afterEnc;
+    let maxHScore=0,humanBestBoard=move.afterEnc;
     for(const hk of hc){
       const hr=Math.floor(hk/BS),hcc=hk%BS;
-      const{gained,afterEnc:hAfter}=scoreMove(board,move.afterEnc,humanIdx,hr,hcc,cascadeMode,playerDefs,palette,numPlayers,BS);
-      if(gained>maxHG){maxHG=gained;humanBestBoard=hAfter;}
-      if(maxHG>40) break;
+      const{gained,territorial,afterEnc:hAfter}=scoreMove(board,move.afterEnc,humanIdx,hr,hcc,cascadeMode,playerDefs,palette,numPlayers,BS,aiLevel==="grandmaster");
+      const hTotal=gained+(aiLevel==="grandmaster"?territorial:0);
+      if(hTotal>maxHScore){maxHScore=hTotal;humanBestBoard=hAfter;}
+      if(maxHScore>50) break;
     }
-    let net=move.gained*1.5-maxHG;
 
-    // Grandmaster: also simulate AI's best counter-reply after human's best move
+    let net=move.total*1.5-maxHScore*1.2;
+
+
     if(aiLevel==="grandmaster"&&humanBestBoard!==move.afterEnc){
       const ac2=getClickableCellsForPlayer(board,humanBestBoard,pid,playerDefs,palette,BS);
-      let bestCounter=0;
+      let bestCounterScore=0;
       for(const ak of ac2){
         const ar=Math.floor(ak/BS),acc=ak%BS;
-        const{gained:ag}=scoreMove(board,humanBestBoard,pid,ar,acc,cascadeMode,playerDefs,palette,numPlayers,BS);
-        if(ag>bestCounter) bestCounter=ag;
-        if(bestCounter>30) break;
+        const{gained:ag,territorial:at}=scoreMove(board,humanBestBoard,pid,ar,acc,cascadeMode,playerDefs,palette,numPlayers,BS,true);
+        const cs=ag+at;
+        if(cs>bestCounterScore) bestCounterScore=cs;
+        if(bestCounterScore>60) break;
       }
-      // Weight: initial gain + discounted counter - human reply
-      net=move.gained*1.5+bestCounter*0.6-maxHG*1.2;
+
+      net=move.total*1.5+bestCounterScore*0.55-maxHScore*1.3;
     }
 
     if(net>bestNet){bestNet=net;bestMove=move;}
@@ -770,9 +943,15 @@ function EditorScreen({config,onSave,onClose,T}){
               <div style={{fontSize:13,fontWeight:"bold",color:draft.theme===key?th.accentColor:T.text,marginBottom:4,letterSpacing:2}}>
                 {draft.theme===key?"✓ ":""}{th.name.toUpperCase()}
               </div>
-              <div style={{display:"flex",gap:4,marginTop:6}}>
-                {[th.bg,th.cardBg,th.border,th.accentColor,"#FF4757","#2ED573"].map((c,i)=>(
-                  <div key={i} style={{width:16,height:16,borderRadius:3,background:c,border:"1px solid rgba(255,255,255,0.1)"}}/>
+              <div style={{display:"flex",gap:3,marginTop:6,flexWrap:"wrap"}}>
+                {(th.boardColours||[]).slice(0,8).map((bc,i)=>(
+                  <div key={i} style={{width:14,height:14,borderRadius:2,background:bc.hex,
+                    border:"1px solid rgba(0,0,0,0.2)",flexShrink:0}}/>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:4,marginTop:4}}>
+                {[th.bg,th.cardBg,th.border,th.accentColor].map((c,i)=>(
+                  <div key={i} style={{width:14,height:14,borderRadius:2,background:c,border:"1px solid rgba(128,128,128,0.3)"}}/>
                 ))}
               </div>
             </button>
@@ -791,6 +970,7 @@ export default function PixelGo(){
   const[phase,setPhase]                =useState("numSelect");
   const[editing,setEditing]            =useState(false);
   const[showStats,setShowStats]        =useState(false);
+  const[showWelcome,setShowWelcome]    =useState(false);
   const[numPlayers,setNumPlayers]      =useState(2);
   const[vsComputer,setVsComputer]      =useState(false);
   const[teamMode,setTeamMode]          =useState(false);
@@ -802,11 +982,11 @@ export default function PixelGo(){
   const[pendingColor,setPendingColor]  =useState(null);
   const[sharedBoard,setSharedBoard]    =useState(null);
   const[isDailyChallenge,setIsDaily]   =useState(false);
-  // Game options
-  const[timedTurnSecs,setTimedTurnSecs]=useState(0); // 0=off
+
+  const[timedTurnSecs,setTimedTurnSecs]=useState(0);
   const[autoPass,setAutoPass]          =useState(true);
   const[funMode,setFunMode]            =useState(false);
-  // Game state
+
   const[board,setBoard]                =useState(null);
   const[ownership,setOwnership]        =useState(null);
   const[prevOwnership,setPrevOwnership]=useState(null);
@@ -816,7 +996,7 @@ export default function PixelGo(){
   const[captureCount,setCaptureCount]  =useState(0);
   const[hovered,setHovered]            =useState(null);
   const[flash,setFlash]                =useState(null);
-  const[rippleOrigin,setRippleOrigin]  =useState(null);  // {r,c} for ripple animation
+  const[rippleOrigin,setRippleOrigin]  =useState(null);
   const[enclosedFlash,setEnclosedFlash]=useState(null);
   const[autoFlash,setAutoFlash]        =useState(null);
   const[legendFocus,setLegendFocus]    =useState(null);
@@ -828,14 +1008,14 @@ export default function PixelGo(){
   const[aiThinking,setAiThinking]      =useState(false);
   const[showInstructions,setShowInstructions]=useState(false);
   const[timeLeft,setTimeLeft]          =useState(null);
-  const[comboCount,setComboCount]      =useState(0);   // enclosures this turn
-  const[comboStreak,setComboStreak]    =useState(0);   // consecutive turns with enclosure
+  const[comboCount,setComboCount]      =useState(0);
+  const[comboStreak,setComboStreak]    =useState(0);
   const[showCombo,setShowCombo]        =useState(false);
   const[autoPassActive,setAutoPassActive]=useState(false);
 
   const music=useMusicSystem();
 
-  // Refs for AI stale closure prevention
+
   const ownershipRef=useRef(null),prevOwnershipRef=useRef(null);
   const captureCountRef=useRef(0),cpRef=useRef(0),roundRef=useRef(1);
   const boardRef=useRef(null),phaseRef=useRef("numSelect");
@@ -844,7 +1024,10 @@ export default function PixelGo(){
   const timerRef=useRef(null);
 
   const T=THEMES[config.theme||"neon"];
-  const PALETTE=config.boardColours;
+
+  const PALETTE=T.boardColours||config.boardColours;
+
+  const ACTIVE_TEAMS=T.teams||config.teams;
   const diff=difficulty?config.difficulties[difficulty]:null;
   const BS=gridSize?config.gridSizes[gridSize].bs:22;
   const MAX_ROUNDS=config.maxRounds;
@@ -852,7 +1035,7 @@ export default function PixelGo(){
   const FOG_RANGE=difficulty==="veryhard"?3:4;
   const USE_FOG=difficulty==="hard"||difficulty==="veryhard";
 
-  // Ref sync
+
   useEffect(()=>{ownershipRef.current=ownership;},[ownership]);
   useEffect(()=>{prevOwnershipRef.current=prevOwnership;},[prevOwnership]);
   useEffect(()=>{captureCountRef.current=captureCount;},[captureCount]);
@@ -879,10 +1062,10 @@ export default function PixelGo(){
   const TOTAL=BS*BS;
   const claimed=scores.slice(0,numPlayers).reduce((a,b)=>a+b,0);
 
-  // Fog of war visibility
+
   const visibleCells=useMemo(()=>{
     if(!USE_FOG||!ownership||phase!=="playing") return null;
-    // Human player index (always 0 when vs computer, varies in multiplayer)
+
     const humanIdx=playerDefs.findIndex(d=>!d.isAI);
     if(humanIdx<0) return null;
     return computeFogVisibility(ownership,humanIdx,BS,FOG_RANGE);
@@ -919,7 +1102,7 @@ export default function PixelGo(){
   },[hovered,board,ownership,PALETTE]);
   const hoverIsClickable=hovered&&clickableCells.has(hovered[0]*BS+hovered[1]);
 
-  // Timed turns
+
   useEffect(()=>{
     if(phase!=="playing"||!timedTurnSecs||playerDefs[cp]?.isAI) return;
     setTimeLeft(timedTurnSecs);
@@ -933,7 +1116,7 @@ export default function PixelGo(){
     return()=>{clearInterval(timerRef.current);setTimeLeft(null);};
   },[cp,phase,timedTurnSecs]);
 
-  // Auto-pass
+
   useEffect(()=>{
     if(phase!=="playing"||!autoPass||playerDefs[cp]?.isAI) return;
     if(clickableCells.size===0&&captureCount===0){
@@ -943,7 +1126,7 @@ export default function PixelGo(){
     }
   },[clickableCells.size,cp,phase,autoPass,captureCount]);
 
-  // AI auto-play
+
   useEffect(()=>{
     if(phase!=="playing") return;
     const cur=playerDefs[cp];
@@ -998,7 +1181,7 @@ export default function PixelGo(){
     },500);
   }
 
-  // Human capture
+
   function executeCapture(r,c){
     clearInterval(timerRef.current);setTimeLeft(null);
     const base=(captureCount>0&&prevOwnership)?prevOwnership:ownership;
@@ -1036,7 +1219,7 @@ export default function PixelGo(){
     if(phase!=="playing") return;
     clearInterval(timerRef.current);setTimeLeft(null);
     music.sfxEndTurn();setConfirmEnd(false);
-    // Update combo streak
+
     if(funMode){if(comboCount===0) setComboStreak(0);}
     setComboCount(0);
     const next=(cp+1)%numPlayers;let newRound=round;
@@ -1100,6 +1283,25 @@ export default function PixelGo(){
     setPhase("playerSetup");
   },[difficulty,gridSize,config,isDailyChallenge]);
 
+
+  const restartGame=useCallback(()=>{
+    const bs=config.gridSizes[gridSize].bs,d=difficulty;
+
+    setBoard(null);setOwnership(null);setPrevOwnership(null);
+    setCp(0);setRound(1);setTurnNum(1);setCaptureCount(0);
+    setHovered(null);setFlash(null);setRippleOrigin(null);
+    setEnclosedFlash(null);setAutoFlash(null);setLegendFocus(null);
+    setVictoryAssured(null);setShowScores(false);setConfirmEnd(false);
+    setFinalOwnership(null);setReviewing(false);setAiThinking(false);
+    setComboCount(0);setComboStreak(0);setShowCombo(false);setAutoPassActive(false);
+    setTimeLeft(null);
+
+    setPlayerDefs([]);setSetupIdx(0);setPendingColor(null);
+    const rand=isDailyChallenge?seededRand(dateSeed()):undefined;
+    setSharedBoard(config.difficulties[d].board==="grouped"?mkBoardGrouped(bs,rand):mkBoardRandom(bs,rand));
+    setPhase("playerSetup");
+  },[difficulty,gridSize,config,isDailyChallenge]);
+
   const startDailyChallenge=useCallback(()=>{
     const todayStats=loadStats();
     if(todayStats.daily?.lastDate===getTodayStr()){
@@ -1125,8 +1327,8 @@ export default function PixelGo(){
     let newDefs=[...playerDefs,{...pendingColor,row:r,col:c,isAI:false}];
     if(vsComputer&&newDefs.length===1){
       const usedHexes=newDefs.map(d=>d.hex);
-      const available=config.teams.filter(t=>!usedHexes.includes(t.hex));
-      const aiTeam=available[Math.floor(Math.random()*available.length)]||config.teams[1];
+      const available=ACTIVE_TEAMS.filter(t=>!usedHexes.includes(t.hex));
+      const aiTeam=available[Math.floor(Math.random()*available.length)]||ACTIVE_TEAMS[1];
       let bestPos=[0,BS-1];
       if(aiLevel==="recruit"){
         const corners=[[0,0],[0,BS-1],[BS-1,0],[BS-1,BS-1]];
@@ -1246,12 +1448,12 @@ export default function PixelGo(){
         {UNLIMITED?"UNLIMITED ROUNDS":"MAX "+MAX_ROUNDS+" ROUNDS"} · MOST CELLS WINS
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button onClick={()=>setShowInstructions("general")} style={{
+        <button onClick={()=>setShowWelcome(true)} style={{
           flex:1,padding:"8px",borderRadius:8,cursor:"pointer",border:`1px solid ${T.btnBorder}`,
           background:"transparent",color:T.btnText,fontFamily:T.font,fontSize:9,letterSpacing:2,transition:"all 0.2s"}}
           onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accentColor;e.currentTarget.style.color=T.accentColor;}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor=T.btnBorder;e.currentTarget.style.color=T.btnText;}}>
-          ? HOW TO PLAY
+          ? GUIDE
         </button>
         <button onClick={()=>setShowStats(true)} style={{
           flex:1,padding:"8px",borderRadius:8,cursor:"pointer",border:`1px solid ${T.btnBorder}`,
@@ -1269,6 +1471,7 @@ export default function PixelGo(){
         </button>
       </div>
       {showInstructions&&<InstructionsModal topic={showInstructions} onClose={()=>setShowInstructions(false)}/>}
+      {showWelcome&&<WelcomeScreen onClose={()=>setShowWelcome(false)} T={T}/>}
     </Shell>
   );
 
@@ -1432,7 +1635,7 @@ export default function PixelGo(){
         </div>
         {!pickingPos&&(
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:20,width:"100%",maxWidth:272}}>
-            {config.teams.map(pc=>(
+            {ACTIVE_TEAMS.map(pc=>(
               <ColorBtn key={pc.hex} pc={pc} taken={takenColors.includes(pc.hex)} onClick={()=>pickColor(pc)} T={T}/>
             ))}
           </div>
@@ -1490,7 +1693,7 @@ export default function PixelGo(){
           {Array.from({length:BS*BS},(_,k)=>{
             const r=Math.floor(k/BS),c=k%BS,owner=usedO[r][c],isOwned=owner>=0;
             return<div key={k} style={{background:isOwned?playerDefs[owner].hex:PALETTE[board[r][c]].hex,
-              filter:isOwned?"none":"saturate(0.2) brightness(0.5)",
+              filter:isOwned?(T.ownedFilter||"saturate(1.4) brightness(1.1)"):(T.neutralFilter||"saturate(0.45) brightness(0.75)"),
               borderRadius:T.pixelated?0:T.cellRadius}}/>;
           })}
         </div>
@@ -1575,7 +1778,7 @@ export default function PixelGo(){
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
           <GlowButton hex={winHex} onClick={()=>setReviewing(true)}>VIEW BOARD</GlowButton>
-          <GlowButton hex={winHex} onClick={()=>{resetToMenu();setTimeout(()=>setPhase("playerSetup"),50);}}>PLAY AGAIN</GlowButton>
+          <GlowButton hex={winHex} onClick={restartGame}>PLAY AGAIN</GlowButton>
           <GhostButton onClick={resetToMenu} T={T}>MENU</GhostButton>
         </div>
       </div>
@@ -1717,27 +1920,31 @@ export default function PixelGo(){
           const isAutoFlash=autoFlash&&autoFlash.has(k);
           const isLegendHighlight=legendFocus!==null&&!isOwned&&board[r][c]===legendFocus;
 
-          // Fog of war
+
           const isFogged=visibleCells&&!visibleCells.has(k)&&!isOwned;
 
-          // Ripple delay
+
           let rippleDelay=null;
           if(rippleOrigin&&isFlash){
             const dist=Math.sqrt((r-rippleOrigin.r)**2+(c-rippleOrigin.c)**2);
             rippleDelay=`${Math.round(dist*55)}ms`;
           }
 
-          // Border territory animation: owned by current human player with adjacent non-owned
+
           const isTerrBorder=isOwned&&owner===cp&&!isAITurn&&
             [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].some(([nr,nc])=>
               nr>=0&&nr<BS&&nc>=0&&nc<BS&&ownership[nr][nc]!==cp
             );
 
           const bgColor=isFogged?"#050508":isOwned?playerDefs[owner].hex:PALETTE[board[r][c]].hex;
-          const cellFilter=isFogged?"none":isOwned?"none"
-            :isLegendHighlight?"none"
-            :legendFocus!==null?"saturate(0.15) brightness(0.5)"
-            :"saturate(0.28) brightness(0.72)";
+
+          const nF=T.neutralFilter||"saturate(0.55) brightness(0.85)";
+          const oF=T.ownedFilter||"saturate(1.4) brightness(1.1)";
+          const cellFilter=isFogged?"none"
+            :isOwned?oF
+            :isLegendHighlight?`saturate(0.9) brightness(1.0)`
+            :legendFocus!==null?`saturate(0.12) brightness(0.45)`
+            :nF;
 
           return(
             <div key={k} onClick={()=>handleBoardClick(r,c)} onMouseEnter={()=>{if(!isAITurn) setHovered([r,c]);}}
@@ -1928,7 +2135,7 @@ function MiniBoard({board,playerDefs,takenCells,curColor,onPick,BS,palette,T}){
           <div key={k} onClick={()=>{if(!taken) onPick(r,c);}} onMouseEnter={()=>setHov(k)}
             style={{background:existingDef>=0?playerDefs[existingDef].hex:palette[board[r][c]].hex,
               position:"relative",cursor:taken?"not-allowed":"crosshair",
-              filter:existingDef>=0?"none":"saturate(0.28) brightness(0.72)",
+              filter:existingDef>=0?(T?.ownedFilter||"saturate(1.3) brightness(1.05)"):(T?.neutralFilter||"saturate(0.55) brightness(0.85)"),
               borderRadius:T.pixelated?0:T.cellRadius}}>
             {existingDef>=0&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
               <div style={{width:4,height:4,borderRadius:"50%",background:"white",boxShadow:"0 0 3px black"}}/>
@@ -1938,6 +2145,173 @@ function MiniBoard({board,playerDefs,takenCells,curColor,onPick,BS,palette,T}){
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ─── Welcome / How-to-play screen ─────────────────── */
+function WelcomeScreen({onClose,T}){
+  const[page,setPage]=useState(0);
+
+  const PAGES=[
+    {
+      icon:"🎮",
+      title:"WELCOME TO PIXEL GO",
+      subtitle:"A colour territory battle game",
+      body:[
+        "Pixel Go is a strategy game for 1–4 players (or vs computer) where you compete to control as much of a grid as possible.",
+        "The player or team that holds the most cells when no one can be beaten — or when rounds run out — wins.",
+        "Each turn you capture one group of neutral cells. Plan ahead, box in your opponents, and claim the board.",
+      ],
+    },
+    {
+      icon:"👆",
+      title:"HOW TO TAKE A TURN",
+      subtitle:"Claiming neutral territory",
+      body:[
+        "Tap any muted (neutral) cell that borders your territory. The whole connected block of the same colour joins you instantly.",
+        "Hover over a cell first to see a preview — it shows exactly which cells you'd capture and how many.",
+        "You can only make ONE capture per turn. But you can tap a different group before pressing End Turn to change your mind.",
+      ],
+    },
+    {
+      icon:"🎨",
+      title:"YOUR COLOUR IS SPECIAL",
+      subtitle:"Reach anywhere on the board",
+      body:[
+        "At the start of your turn, any neutral cell matching your team's colour that touches your territory is claimed for free automatically.",
+        "Even better — any neutral cell of your colour, anywhere on the board, is clickable. Use this to establish territory on the other side of the grid before your opponent blocks you.",
+      ],
+    },
+    {
+      icon:"🔲",
+      title:"ENCLOSURES",
+      subtitle:"Box in neutral cells to claim them",
+      body:[
+        "If you fully surround a group of neutral cells — using your territory and the board walls — they are automatically claimed.",
+        "This is the most powerful move in the game. A single capture that seals off 20 neutral cells is worth far more than just the group you clicked.",
+        "Exception: if an enclosed region contains another player's colour, they can still reach it from anywhere, so it stays neutral.",
+      ],
+    },
+    {
+      icon:"🌫️",
+      title:"GAME MODES",
+      subtitle:"Easy to Very Hard",
+      body:[
+        "EASY — Grouped pixels, cascading captures. All cells of a colour touching you chain together. Full score display.",
+        "NORMAL — Grouped pixels, no cascade. Only the group you click joins you. Scores hidden.",
+        "HARD — Random pixels, cascade. Plus Fog of War — you can only see 4 cells from your territory.",
+        "VERY HARD — Random pixels, no cascade, tighter fog (3 cells). The hardest challenge.",
+      ],
+    },
+    {
+      icon:"🤖",
+      title:"VS COMPUTER",
+      subtitle:"Four difficulty levels",
+      body:[
+        "RECRUIT — Random moves. Good for learning.",
+        "VETERAN — Always picks the biggest group available.",
+        "MASTER — Evaluates space control and blocks your best move.",
+        "GRANDMASTER — Thinks 3 moves ahead, plans enclosures, denies your access to territory. Very hard to beat.",
+      ],
+    },
+    {
+      icon:"💡",
+      title:"TIPS FOR NEW PLAYERS",
+      subtitle:"How to win",
+      body:[
+        "Think about space, not just cells. A move that cuts off 15 neutral cells from your opponent is better than directly claiming 5.",
+        "Push along walls — the board edge makes enclosure much easier.",
+        "Your own colour spawns for free — spot it on the board at the start and plan around those locations.",
+        "In fog of war modes, expand in multiple directions to reveal more of the board before your opponent does.",
+      ],
+    },
+  ];
+
+  const page_data=PAGES[page];
+  const isLast=page===PAGES.length-1;
+
+  return(
+    <div style={{
+      position:"fixed",inset:0,zIndex:2000,
+      background:"rgba(0,0,0,0.95)",
+      display:"flex",alignItems:"center",justifyContent:"center",
+      padding:"16px",fontFamily:T.font,overflowY:"auto",
+    }}>
+      <div style={{
+        background:T.cardBg,border:`1px solid ${T.border}`,
+        borderRadius:T.pixelated?0:16,
+        width:"100%",maxWidth:380,
+        display:"flex",flexDirection:"column",
+        boxShadow:"0 0 60px rgba(0,0,0,0.9)",
+      }}>
+        {/* Progress dots */}
+        <div style={{display:"flex",gap:4,justifyContent:"center",padding:"16px 16px 0"}}>
+          {PAGES.map((_,i)=>(
+            <div key={i} onClick={()=>setPage(i)} style={{
+              width:i===page?20:6,height:6,borderRadius:3,cursor:"pointer",
+              background:i===page?T.accentColor:i<page?"#444":T.border,
+              transition:"all 0.3s",
+            }}/>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{padding:"20px 24px 16px",flex:1}}>
+          <div style={{fontSize:44,textAlign:"center",marginBottom:10,lineHeight:1}}>{page_data.icon}</div>
+          <div style={{fontSize:14,fontWeight:"bold",letterSpacing:3,color:T.accentColor,
+            textAlign:"center",marginBottom:4}}>{page_data.title}</div>
+          <div style={{fontSize:9,color:T.textDim,letterSpacing:2,textAlign:"center",marginBottom:16}}>
+            {page_data.subtitle.toUpperCase()}
+          </div>
+          <div style={{borderTop:`1px solid ${T.border}`,paddingTop:14}}>
+            {page_data.body.map((line,i)=>(
+              <div key={i} style={{
+                display:"flex",gap:10,marginBottom:12,alignItems:"flex-start",
+              }}>
+                <div style={{
+                  width:18,height:18,borderRadius:"50%",background:hexToRgba(T.accentColor,0.2),
+                  border:`1px solid ${T.accentColor}`,flexShrink:0,marginTop:1,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:8,color:T.accentColor,fontWeight:"bold",
+                }}>{i+1}</div>
+                <div style={{fontSize:11,color:T.text,lineHeight:1.7,flex:1}}>{line}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div style={{
+          display:"flex",gap:8,padding:"12px 20px 20px",
+          borderTop:`1px solid ${T.border}`,
+        }}>
+          {page>0?(
+            <button onClick={()=>setPage(p=>p-1)} style={{
+              flex:1,padding:"10px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+              border:`1px solid ${T.btnBorder}`,background:"transparent",
+              color:T.btnText,fontFamily:T.font,fontSize:10,letterSpacing:1,
+            }}>← BACK</button>
+          ):(
+            <button onClick={onClose} style={{
+              flex:1,padding:"10px",borderRadius:T.pixelated?0:8,cursor:"pointer",
+              border:`1px solid ${T.btnBorder}`,background:"transparent",
+              color:T.btnText,fontFamily:T.font,fontSize:10,letterSpacing:1,
+            }}>SKIP →</button>
+          )}
+          <button onClick={()=>{if(isLast)onClose();else setPage(p=>p+1);}} style={{
+            flex:2,padding:"10px",borderRadius:T.pixelated?0:8,cursor:"pointer",border:"none",
+            background:isLast?`linear-gradient(135deg,${T.accentColor},${hexToRgba(T.accentColor,0.6)})`:`linear-gradient(135deg,${T.accentColor},${hexToRgba(T.accentColor,0.6)})`,
+            color:"white",fontFamily:T.font,fontSize:10,fontWeight:"bold",letterSpacing:2,
+            boxShadow:`0 0 20px ${hexToRgba(T.accentColor,0.4)}`,
+          }}>{isLast?"LET'S PLAY! →":"NEXT →"}</button>
+        </div>
+
+        {/* Page count */}
+        <div style={{textAlign:"center",fontSize:8,color:T.textFaint,paddingBottom:12,letterSpacing:1}}>
+          {page+1} / {PAGES.length}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2040,7 +2414,7 @@ function GhostButton({onClick,children,style={},T}){
 }
 
 const GLOBAL_CSS=`
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+  @import url('https:
   * { box-sizing: border-box; margin: 0; padding: 0; }
   @keyframes ring-pulse    { 0% { transform:scale(1); opacity:0.7; } 70% { transform:scale(2.2); opacity:0; } 100% { transform:scale(2.2); opacity:0; } }
   @keyframes cell-flicker  { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
